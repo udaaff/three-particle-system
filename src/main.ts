@@ -15,8 +15,12 @@ async function main() {
   camera.position.set(0, 5, 15);
   camera.lookAt(0, 0, 0);
 
-  const renderer = new WebGLRenderer();
+  const renderer = new WebGLRenderer({
+    alpha: true,
+    antialias: true
+  });
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0xFFFFFF, 1);
   document.body.appendChild(renderer.domElement);
 
   await initAssets({
@@ -38,30 +42,32 @@ async function main() {
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture: texture,
-    maxParticles: 100,
+    maxParticles: 1000,
     debug: true,
     renderMode: {
-      type: 'billboard'
+      type: 'oriented',
+      normal: new Vector3(1, 1, 0).normalize(),  // Частицы будут смотреть по диагонали
+      up: new Vector3(0, 0, 1)                   // Верх частиц будет направлен вдоль оси Z
     },
     emitter: {
-      shape: 'point'
+      shape: 'point',
+      point: new Vector3(0, 0, 0)
     },
     particle: {
+      lifetime: range(1, 2),
+      size: range(2.0, 2.0),
       color: new THREE.Color(1, 0, 0),
-      lifetime: range(1, 3),
-      size: range(1, 3),
-      opacity:  curve([
-        [0, 0],
-        [0.2, 0.2],
-        [0.8, 0.2 ],
+      opacity: curve([
+        [0, 1],
+        [0.8, 1],
         [1, 0]
       ]),
       speedScale: range(1, 2),
-      rotation: range(-2, 2)
+      rotation: range(0, 0)
     },
     _physics: {
-      gravity: new Vector3(0, 0, 0),
-      friction: 0,
+      gravity: new Vector3(0, -2, 0),
+      friction: 0.1,
       vortex: {
         strength: 0,
         center: new Vector3(0, 0, 0)

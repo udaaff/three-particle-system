@@ -11,10 +11,17 @@ uniform mat4 viewMatrix;
 
 // Наши кастомные атрибуты
 attribute vec3 instancePosition;
+attribute vec3 instanceVelocity;
 attribute float instanceScale;
 attribute float instanceOpacity;
 attribute vec3 instanceColor;
 attribute float instanceRotation;
+
+// Униформы для oriented режима
+#ifdef RENDER_MODE_ORIENTED
+uniform vec3 uNormal;
+uniform vec3 uUp;
+#endif
 
 varying vec2 vUv;
 varying float vOpacity;
@@ -86,6 +93,7 @@ vec3 turbulence(vec3 p) {
 #endif
 
 void main() {
+  // Поворачиваем UV координаты
   vec2 rotatedUV = uv - 0.5;
   float c = cos(instanceRotation);
   float s = sin(instanceRotation);
@@ -101,58 +109,51 @@ void main() {
   vec3 finalPosition = instancePosition;
 
   #ifdef USE_TURBULENCE
-    // Применяем турбулентность к позиции
     vec3 turbulentOffset = turbulence(instancePosition * uTurbulenceScale) * uTurbulenceStrength;
     finalPosition += turbulentOffset;
   #endif
 
-  #ifdef BILLBOARD
+  vec3 vertexPosition;
+
+  #ifdef RENDER_MODE_BILLBOARD
+    // Billboard режим - всегда смотрит на камеру
     vec3 cameraRight = vec3(viewMatrix[0].x, viewMatrix[1].x, viewMatrix[2].x);
     vec3 cameraUp = vec3(viewMatrix[0].y, viewMatrix[1].y, viewMatrix[2].y);
 
-    vec3 vertexPosition =
+    vertexPosition =
       cameraRight * position.x * instanceScale +
       cameraUp * position.y * instanceScale;
 
-    vertexPosition += finalPosition;
-  #else
-    #if defined(PLANE_XZ)
-      vec3 vertexPosition = vec3(
-        position.x * instanceScale,
-        0.0,
-        position.y * instanceScale
-      );
-      vertexPosition = vec3(
-        vertexPosition.x * c + vertexPosition.z * s,
-        vertexPosition.y,
-        -vertexPosition.x * s + vertexPosition.z * c
-      );
-    #elif defined(PLANE_XY)
-      vec3 vertexPosition = vec3(
-        position.x * instanceScale,
-        position.y * instanceScale,
-        0.0
-      );
-      vertexPosition = vec3(
-        vertexPosition.x * c - vertexPosition.y * s,
-        vertexPosition.x * s + vertexPosition.y * c,
-        vertexPosition.z
-      );
-    #else // PLANE_YZ
-      vec3 vertexPosition = vec3(
-        0.0,
-        position.x * instanceScale,
-        position.y * instanceScale
-      );
-      vertexPosition = vec3(
-        vertexPosition.x,
-        vertexPosition.y * c - vertexPosition.z * s,
-        vertexPosition.y * s + vertexPosition.z * c
-      );
-    #endif
+  #elif defined(RENDER_MODE_VELOCITY_ALIGNED)
+    // Velocity aligned режим
+    vec3 velocity = normalize(instanceVelocity);
 
-    vertexPosition += finalPosition;
+    // Создаем базис для частицы, используя вектор скорости как forward
+    vec3 forward = velocity;
+    vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
+    vec3 up = normalize(cross(right, forward));
+
+    // Используем этот базис для позиционирования вершин
+    vertexPosition =
+        right * position.x * instanceScale +
+        up * position.y * instanceScale;
+
+  #elif defined(RENDER_MODE_ORIENTED)
+    // Oriented режим - произвольная ориентация
+    vec3 normal = normalize(uNormal);
+    vec3 up = normalize(uUp);
+
+    // Создаем базис для частицы
+    vec3 right = normalize(cross(normal, up));
+    up = normalize(cross(right, normal));
+
+    // Используем этот базис для позиционирования вершин
+    vertexPosition =
+        right * position.x * instanceScale +
+        up * position.y * instanceScale;
   #endif
+
+  vertexPosition += finalPosition;
 
   vec4 mvPosition = modelViewMatrix * vec4(vertexPosition, 1.0);
   gl_Position = projectionMatrix * mvPosition;
