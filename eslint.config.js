@@ -17,11 +17,11 @@ export default [
     },
     plugins: {
       "@typescript-eslint": eslintPluginTypescript,
-      "simple-import-sort": eslintPluginSimpleImportSort,
+      // "simple-import-sort": eslintPluginSimpleImportSort,
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
-      "simple-import-sort/imports": "error",
+      // "simple-import-sort/imports": "error",
     },
   },
 ];

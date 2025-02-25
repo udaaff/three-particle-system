@@ -1,3 +1,5 @@
+import glsl from 'vite-plugin-glsl';
+
 export default {
     base: './',
     server: {
@@ -7,4 +9,5 @@ export default {
     define: {
         APP_VERSION: JSON.stringify(process.env.npm_package_version),
     },
+    plugins: [glsl()]
 }
