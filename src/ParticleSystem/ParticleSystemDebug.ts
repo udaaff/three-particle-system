@@ -5,6 +5,7 @@ export class ParticleSystemDebug {
   private pixelCountElement: HTMLDivElement;
   private executionTimeElement: HTMLDivElement;
   private fpsElement: HTMLDivElement;
+  private componentsElement: HTMLDivElement;
   private frameCount: number = 0;
   private lastFpsUpdate: number = 0;
   private lastDebugUpdate: number = 0;
@@ -15,6 +16,7 @@ export class ParticleSystemDebug {
   private smoothedParticleCount: number = 0;
   private smoothedPixelCount: number = 0;
   private smoothingFactor: number = 0.1; // Фактор сглаживания (0-1)
+  private activeComponents: string[] = [];
 
   constructor() {
     // Создаем элементы для отображения дебаг информации
@@ -30,11 +32,13 @@ export class ParticleSystemDebug {
     this.pixelCountElement = document.createElement('div');
     this.executionTimeElement = document.createElement('div');
     this.fpsElement = document.createElement('div');
+    this.componentsElement = document.createElement('div');
 
     debugContainer.appendChild(this.fpsElement);
     debugContainer.appendChild(this.particleCountElement);
     debugContainer.appendChild(this.pixelCountElement);
     debugContainer.appendChild(this.executionTimeElement);
+    debugContainer.appendChild(this.componentsElement);
 
     document.body.appendChild(debugContainer);
   }
@@ -52,6 +56,8 @@ export class ParticleSystemDebug {
         `Estimated pixels: ${Math.round(this.smoothedPixelCount)}`;
       this.executionTimeElement.textContent =
         `Update time: ${this.smoothedExecutionTime.toFixed(2)}ms`;
+      this.componentsElement.textContent =
+        `Components: ${this.activeComponents.join(', ')}`;
       this.lastDebugUpdate = currentTime;
     }
   }
@@ -92,6 +98,11 @@ export class ParticleSystemDebug {
 
   updateExecutionTime(time: number) {
     this.smoothedExecutionTime = this.smooth(this.smoothedExecutionTime, time);
+    this.updateDebugValues();
+  }
+
+  updateComponents(components: string[]) {
+    this.activeComponents = components;
     this.updateDebugValues();
   }
 }

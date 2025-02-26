@@ -47,12 +47,11 @@ async function main() {
   scene.add(group);
 
   // Создаем дебаг до создания ParticleSystem
-  const debug = new ParticleSystemDebug();
 
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture: texture,
-    maxParticles: 2000,
+    maxParticles: 1200000,
     blending: THREE.AdditiveBlending,
     renderMode: {
       type: 'billboard',
@@ -68,30 +67,30 @@ async function main() {
     },
     particle: {
       lifetime: range(5, 10),
-      size: range(0.1, 0.2),
-      color: curve([
-        [0, new THREE.Color(1, 0, 0)],     // Красный в начале
-        [0.5, new THREE.Color(0, 1, 0)],    // Желтый в середине
-        [1, new THREE.Color(0, 0, 1)]       // Белый в конце
-      ]),
-      opacity: curve([
-        [0, 0],
-        [0.2, 1],
-        [0.8, 1],
-        [1, 0]
-      ]),
-      speedScale: range(2, 3),
-      textureRotation: range(-Math.PI, Math.PI)
+      size: 0.02,
+      // color: curve([
+      //   [0, new THREE.Color(1, 0, 0)],     // Красный в начале
+      //   [0.5, new THREE.Color(0, 1, 0)],    // Желтый в середине
+      //   [1, new THREE.Color(0, 0, 1)]       // Белый в конце
+      // ]),
+      // opacity: curve([
+      //   [0, 0],
+      //   [0.2, 1],
+      //   [0.8, 1],
+      //   [1, 0]
+      // ]),
+      speedScale: range(1, 2),
+      // textureRotation: range(-Math.PI, Math.PI)
     },
-    physics: {
-      gravity: new Vector3(0, -0.6, 0),
-      friction: 0.5,
-      turbulence: {
-        strength: 0.4,
-        scale: 0.2,
-        speed: 0.2
-      }
-    }
+    // physics: {
+    //   gravity: new Vector3(0, -0.6, 0),
+    //   friction: 0.5,
+    //   turbulence: {
+    //     strength: 0.4,
+    //     scale: 0.2,
+    //     speed: 0.2
+    //   }
+    // }
   });
 
   scene.add(particleSystem);
@@ -102,17 +101,10 @@ async function main() {
     camera.updateProjectionMatrix();
   });
 
+  const debug = new ParticleSystemDebug();
+  debug.updateComponents(particleSystem.getDebugInfo().components);
+
   let lastUpdateTime = 0;
-
-  function updateDebugInfo(particleSystem: ParticleSystem) {
-    const debugInfo = particleSystem.getDebugInfo();
-    debug.updateParticleCount(debugInfo.activeParticles, debugInfo.maxParticles);
-
-    const size = debugInfo.size;
-    if (size) {
-      debug.updatePixelCount(size, debugInfo.activeParticles);
-    }
-  }
 
   function animate(time: number) {
     requestAnimationFrame(animate);
@@ -125,8 +117,8 @@ async function main() {
     const deltaTime = (time - lastUpdateTime) / 1000;
     lastUpdateTime = time;
 
+    particleSystem.emit(2000);
     if (Math.random() < 0.1) {
-      particleSystem.emit(100);
     }
 
     const startTime = performance.now();
@@ -135,7 +127,13 @@ async function main() {
 
     debug.updateExecutionTime(updateTime);
     debug.updateFps(time);
-    updateDebugInfo(particleSystem);
+    const debugInfo = particleSystem.getDebugInfo();
+    debug.updateParticleCount(debugInfo.activeParticles, debugInfo.maxParticles);
+
+    const size = debugInfo.size;
+    if (size) {
+      debug.updatePixelCount(size, debugInfo.activeParticles);
+    }
 
     renderer.render(scene, camera);
   }
