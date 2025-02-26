@@ -48,7 +48,7 @@ async function main() {
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture: texture,
-    maxParticles: 1000,
+    maxParticles: 100000,
     blending: THREE.AdditiveBlending,
     debug: true,
     renderMode: {
@@ -59,34 +59,33 @@ async function main() {
       position: new Vector3(0, 1, 0),
       direction: {
         vector: new Vector3(0, 1, 0),  // Направление вверх
-        spread: Math.PI / 4,           // Угол разброса 45 градусов
+        spread: Math.PI / 2,           // Угол разброса 45 градусов
         randomness: 0.3                // Небольшая случайность для естественности
       }
     },
     particle: {
-      lifetime: range(1, 2),
-      size: range(2.0, 2.0),
-      color: new THREE.Color(1, 0, 0),
+      lifetime: range(20, 30),
+      size: range(0.1, 0.2),
+      color: curve([
+        [0, new THREE.Color(1, 0, 0)],     // Красный в начале
+        [0.5, new THREE.Color(1, 1, 0)],    // Желтый в середине
+        [1, new THREE.Color(1, 1, 1)]       // Белый в конце
+      ]),
       opacity: curve([
         [0, 1],
         [0.8, 1],
         [1, 0]
       ]),
       speedScale: range(1, 2),
-      textureRotation: range(-Math.PI, Math.PI),
-      geometryRotation: range(-Math.PI / 4, Math.PI / 4)
+      textureRotation: range(-Math.PI, Math.PI)
     },
     _physics: {
-      gravity: new Vector3(0, 0, 0),
-      friction: 0.0,
+      gravity: new Vector3(0, -1, 0),
+      friction: 0.5,
       turbulence: {
-        strength: 0.2,    // Увеличиваем силу турбулентности
-        scale: 0.2,       // Увеличиваем масштаб для более крупных завихрений
-        speed: 0.2        // Уменьшаем скорость для более плавного движения
-      },
-      vortex: {
-        strength: 0,
-        center: new Vector3(0, 0, 0)
+        strength: 0.2,
+        scale: 0.2,
+        speed: 0.2
       }
     }
   });

@@ -6,6 +6,8 @@ import { TurbulenceComponent } from './components/TurbulenceComponent';
 import { TextureRotationComponent } from './components/TextureRotationComponent';
 import { GeometryRotationComponent } from './components/GeometryRotationComponent';
 import { ColorComponent } from './components/ColorComponent';
+import { GravityComponent } from './components/GravityComponent';
+import { FrictionComponent } from './components/FrictionComponent';
 import { CurvePath } from './CurvePath';
 import { ParticleSystemDebug } from './ParticleSystemDebug';
 import { ColorCurve, ColorRange, Curve, curve, Range, range } from './Range';
@@ -56,15 +58,15 @@ export interface ParticleSystemConfig {
     textureRotation?: Range;  // Скорость вращения текстуры в радианах/сек
     geometryRotation?: Range; // Скорость вращения геометрии в радианах/сек
   };
-  _physics: {
-    gravity: THREE.Vector3;
-    friction: number;
+  _physics?: {
+    gravity?: THREE.Vector3;
+    friction?: number;
     turbulence?: {
       strength: number;
       scale: number;
       speed: number;
     };
-    vortex: {
+    vortex?: {
       strength: number;
       center: THREE.Vector3;
     };
@@ -96,8 +98,18 @@ export default class ParticleSystem extends THREE.Object3D {
     }
 
     // Инициализируем компоненты на основе конфига
-    if (this.config._physics.turbulence) {
+    if (this.config._physics?.turbulence) {
       this.addComponent(new TurbulenceComponent(this, this.config._physics.turbulence));
+    }
+
+    // Добавляем компонент гравитации, если задан
+    if (this.config._physics?.gravity) {
+      this.addComponent(new GravityComponent(this, this.config._physics.gravity));
+    }
+
+    // Добавляем компонент трения, если задан
+    if (this.config._physics?.friction) {
+      this.addComponent(new FrictionComponent(this, this.config._physics.friction));
     }
 
     // Добавляем компоненты вращения, если заданы соответствующие параметры
@@ -147,7 +159,6 @@ export default class ParticleSystem extends THREE.Object3D {
         geometryRotation: range(-0.04, 0.04),
       },
       _physics: {
-        gravity: new THREE.Vector3(0, 0.05, 0),
         friction: 0.01,
         vortex: {
           strength: 0.1,
@@ -406,16 +417,6 @@ export default class ParticleSystem extends THREE.Object3D {
           }
         }
 
-        // Обновляем скорости под действием гравитации
-        this.velocities[currentIndex * 3] += this.config._physics.gravity.x * deltaTime;
-        this.velocities[currentIndex * 3 + 1] += this.config._physics.gravity.y * deltaTime;
-        this.velocities[currentIndex * 3 + 2] += this.config._physics.gravity.z * deltaTime;
-
-        // Применяем трение
-        this.velocities[currentIndex * 3] *= (1.0 - this.config._physics.friction * deltaTime);
-        this.velocities[currentIndex * 3 + 1] *= (1.0 - this.config._physics.friction * deltaTime);
-        this.velocities[currentIndex * 3 + 2] *= (1.0 - this.config._physics.friction * deltaTime);
-
         const lifePercent = this.ages[currentIndex] / this.config.particle.lifetime.to;
 
         // Обновляем каждый компонент
@@ -464,7 +465,7 @@ export default class ParticleSystem extends THREE.Object3D {
     }
   }
 
-  private addComponent(component: ParticleComponent): void {
+  addComponent(component: ParticleComponent): void {
     this.components.push(component);
     component.initialize();
   }
@@ -478,8 +479,8 @@ export default class ParticleSystem extends THREE.Object3D {
     this.lastUpdateTime = currentTime;
 
     // Эмиттируем частицы каждый кадр
-    if (Math.random() < 1) {
-      this.emit(1);
+    if (Math.random() < 0.1) {
+      this.emit(1000);
     }
 
     if (this.config.debug && this.debug) {
