@@ -52,7 +52,7 @@ async function main() {
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture: texture,
-    maxParticles: 100000,
+    maxParticles: 2000,
     blending: THREE.AdditiveBlending,
     renderMode: {
       type: 'billboard',
@@ -126,7 +126,7 @@ async function main() {
     lastUpdateTime = time;
 
     if (Math.random() < 0.1) {
-      particleSystem.emit(1000);
+      particleSystem.emit(100);
     }
 
     const startTime = performance.now();

@@ -86,45 +86,26 @@ export default class ParticleSystem extends THREE.Object3D {
   private velocities!: Float32Array;
   private components: ParticleComponent[] = [];
 
+  private static readonly componentTypes = [
+    TurbulenceComponent,
+    GravityComponent,
+    FrictionComponent,
+    TextureRotationComponent,
+    GeometryRotationComponent,
+    ColorComponent,
+    OpacityComponent,
+    SizeComponent
+  ] as const;
+
   constructor(config: Partial<ParticleSystemConfig> = {}) {
     super();
     this.config = this.getDefaultConfig(config);
 
     // Инициализируем компоненты на основе конфига
-    if (this.config.physics?.turbulence) {
-      this.addComponent(new TurbulenceComponent(this, this.config.physics.turbulence));
-    }
-
-    // Добавляем компонент гравитации, если задан
-    if (this.config.physics?.gravity) {
-      this.addComponent(new GravityComponent(this, this.config.physics.gravity));
-    }
-
-    // Добавляем компонент трения, если задан
-    if (this.config.physics?.friction) {
-      this.addComponent(new FrictionComponent(this, this.config.physics.friction));
-    }
-
-    // Добавляем компоненты вращения, если заданы соответствующие параметры
-    if (this.config.particle.textureRotation) {
-      this.addComponent(new TextureRotationComponent(this, this.config.particle.textureRotation));
-    }
-    if (this.config.particle.geometryRotation) {
-      this.addComponent(new GeometryRotationComponent(this, this.config.particle.geometryRotation));
-    }
-
-    // Добавляем компонент цвета
-    if (this.config.particle.color) {
-      this.addComponent(new ColorComponent(this, this.config.particle.color));
-    }
-
-    // Добавляем компонент прозрачности
-    if (this.config.particle.opacity) {
-      this.addComponent(new OpacityComponent(this, this.config.particle.opacity));
-    }
-
-    if (this.config.particle.size) {
-      this.addComponent(new SizeComponent(this, this.config.particle.size));
+    for (const ComponentType of ParticleSystem.componentTypes) {
+      if (ComponentType.getConfigValue(this.config)) {
+        this.addComponent(new ComponentType(this));
+      }
     }
 
     this.setupParticleSystem();
@@ -133,7 +114,7 @@ export default class ParticleSystem extends THREE.Object3D {
   getDefaultConfig(config?: Partial<ParticleSystemConfig>): ParticleSystemConfig {
     return {
       texture: new THREE.Texture(),
-      maxParticles: 50000,
+      maxParticles: 1000,
       renderMode: {
         type: 'billboard'
       },

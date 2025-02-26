@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ParticleComponent } from './ParticleComponent';
-import ParticleSystem from '../ParticleSystem';
+import ParticleSystem, { ParticleSystemConfig } from '../ParticleSystem';
 import { Curve, Range } from '../Range';
 
 type SizeValue = number | Range | Curve;
@@ -10,11 +10,17 @@ export class SizeComponent extends ParticleComponent {
   private instanceScale!: THREE.InstancedBufferAttribute;
   private needsSizeUpdate: boolean;
   private needsUpdate: boolean = false;
+  private size: SizeValue;
 
-  constructor(
-    system: ParticleSystem,
-    private size: SizeValue) {
+  static override getConfigValue(config: ParticleSystemConfig): SizeValue | undefined {
+    return config.particle.size;
+  }
+
+  constructor(system: ParticleSystem) {
     super(system);
+    const size = SizeComponent.getConfigValue(system.config);
+    if (!size) throw new Error('Size value is required for SizeComponent');
+    this.size = size;
     this.needsSizeUpdate = size instanceof Curve || size instanceof Range;
   }
 

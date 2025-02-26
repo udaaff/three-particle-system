@@ -1,12 +1,15 @@
 import * as THREE from 'three';
-
-import ParticleSystem from '../ParticleSystem';
+import ParticleSystem, { ParticleSystemConfig } from '../ParticleSystem';
 
 export abstract class ParticleComponent {
   protected system: ParticleSystem;
 
   constructor(system: ParticleSystem) {
     this.system = system;
+  }
+
+  static getConfigValue(config: ParticleSystemConfig): any | undefined {
+    return undefined;
   }
 
   // Вызывается при инициализации системы

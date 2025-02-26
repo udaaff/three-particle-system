@@ -1,13 +1,19 @@
 import * as THREE from 'three';
 import { ParticleComponent } from './ParticleComponent';
-import ParticleSystem from '../ParticleSystem';
+import ParticleSystem, { ParticleSystemConfig } from '../ParticleSystem';
 
 export class GravityComponent extends ParticleComponent {
-  constructor(
-    system: ParticleSystem,
-    private gravity: THREE.Vector3
-  ) {
+  private gravity: THREE.Vector3;
+
+  static override getConfigValue(config: ParticleSystemConfig): THREE.Vector3 | undefined {
+    return config.physics?.gravity;
+  }
+
+  constructor(system: ParticleSystem) {
     super(system);
+    const gravity = GravityComponent.getConfigValue(system.config);
+    if (!gravity) throw new Error('Gravity vector is required for GravityComponent');
+    this.gravity = gravity;
   }
 
   initialize(): void {

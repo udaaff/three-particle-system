@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ParticleComponent } from './ParticleComponent';
-import ParticleSystem from '../ParticleSystem';
+import ParticleSystem, { ParticleSystemConfig } from '../ParticleSystem';
 import { Range, Curve } from '../Range';
 
 type OpacityValue = number | Range | Curve;
@@ -10,12 +10,17 @@ export class OpacityComponent extends ParticleComponent {
   private opacityAttribute!: THREE.InstancedBufferAttribute;
   private needsOpacityUpdate: boolean;
   private needsUpdate: boolean = false;
+  private opacity: OpacityValue;
 
-  constructor(
-    system: ParticleSystem,
-    private opacity: OpacityValue
-  ) {
+  static override getConfigValue(config: ParticleSystemConfig): OpacityValue | undefined {
+    return config.particle.opacity;
+  }
+
+  constructor(system: ParticleSystem) {
     super(system);
+    const opacity = OpacityComponent.getConfigValue(system.config);
+    if (!opacity) throw new Error('Opacity value is required for OpacityComponent');
+    this.opacity = opacity;
     this.needsOpacityUpdate = opacity instanceof Curve || opacity instanceof Range;
   }
 

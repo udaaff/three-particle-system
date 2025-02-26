@@ -1,19 +1,25 @@
 import * as THREE from 'three';
-
 import { ParticleComponent } from './ParticleComponent';
+import ParticleSystem, { ParticleSystemConfig } from '../ParticleSystem';
 
-interface TurbulenceConfig {
+type TurbulenceConfig = {
   strength: number;
   scale: number;
   speed: number;
-}
+};
 
 export class TurbulenceComponent extends ParticleComponent {
   private time: number = 0;
   private config: TurbulenceConfig;
 
-  constructor(system: any, config: TurbulenceConfig) {
+  static override getConfigValue(config: ParticleSystemConfig): TurbulenceConfig | undefined {
+    return config.physics?.turbulence;
+  }
+
+  constructor(system: ParticleSystem) {
     super(system);
+    const config = TurbulenceComponent.getConfigValue(system.config);
+    if (!config) throw new Error('Turbulence config is required for TurbulenceComponent');
     this.config = config;
   }
 

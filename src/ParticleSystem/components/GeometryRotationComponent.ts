@@ -1,18 +1,23 @@
 import * as THREE from 'three';
 import { Range } from '../Range';
 import { ParticleComponent } from './ParticleComponent';
-import ParticleSystem from '../ParticleSystem';
+import ParticleSystem, { ParticleSystemConfig } from '../ParticleSystem';
 
 export class GeometryRotationComponent extends ParticleComponent {
   private rotations!: Float32Array;
   private rotationSpeeds!: Float32Array;
   private rotationAttribute!: THREE.InstancedBufferAttribute;
+  private range: Range;
 
-  constructor(
-    system: ParticleSystem,
-    private rotationRange: Range
-  ) {
+  static override getConfigValue(config: ParticleSystemConfig): Range | undefined {
+    return config.particle.geometryRotation;
+  }
+
+  constructor(system: ParticleSystem) {
     super(system);
+    const range = GeometryRotationComponent.getConfigValue(system.config);
+    if (!range) throw new Error('Geometry rotation range is required for GeometryRotationComponent');
+    this.range = range;
   }
 
   initialize(): void {
@@ -23,7 +28,7 @@ export class GeometryRotationComponent extends ParticleComponent {
 
   onEmit(index: number): void {
     this.rotations[index] = 0;
-    this.rotationSpeeds[index] = this.rotationRange.lerp(Math.random());
+    this.rotationSpeeds[index] = this.range.lerp(Math.random());
   }
 
   onUpdate(index: number, deltaTime: number, _lifePercent: number): void {

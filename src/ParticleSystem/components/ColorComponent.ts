@@ -1,19 +1,26 @@
 import * as THREE from 'three';
 import { ParticleComponent } from './ParticleComponent';
-import ParticleSystem from '../ParticleSystem';
+import ParticleSystem, { ParticleSystemConfig } from '../ParticleSystem';
 import { ColorCurve, ColorRange } from '../Range';
+
+type ColorValue = THREE.Color | ColorRange | ColorCurve;
 
 export class ColorComponent extends ParticleComponent {
   private colors!: Float32Array;
   private colorAttribute!: THREE.InstancedBufferAttribute;
   private needsColorUpdate: boolean;
   private needsUpdate: boolean = false;
+  private color: ColorValue;
 
-  constructor(
-    system: ParticleSystem,
-    private color: THREE.Color | ColorRange | ColorCurve
-  ) {
+  static override getConfigValue(config: ParticleSystemConfig): ColorValue | undefined {
+    return config.particle.color;
+  }
+
+  constructor(system: ParticleSystem) {
     super(system);
+    const color = ColorComponent.getConfigValue(system.config);
+    if (!color) throw new Error('Color value is required for ColorComponent');
+    this.color = color;
     this.needsColorUpdate = color instanceof ColorCurve || color instanceof ColorRange;
   }
 

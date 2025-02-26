@@ -1,13 +1,19 @@
 import * as THREE from 'three';
 import { ParticleComponent } from './ParticleComponent';
-import ParticleSystem from '../ParticleSystem';
+import ParticleSystem, { ParticleSystemConfig } from '../ParticleSystem';
 
 export class FrictionComponent extends ParticleComponent {
-  constructor(
-    system: ParticleSystem,
-    private friction: number
-  ) {
+  private friction: number;
+
+  static override getConfigValue(config: ParticleSystemConfig): number | undefined {
+    return config.physics?.friction;
+  }
+
+  constructor(system: ParticleSystem) {
     super(system);
+    const friction = FrictionComponent.getConfigValue(system.config);
+    if (friction === undefined) throw new Error('Friction value is required for FrictionComponent');
+    this.friction = friction;
   }
 
   initialize(): void {
