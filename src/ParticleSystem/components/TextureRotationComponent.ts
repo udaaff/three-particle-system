@@ -16,8 +16,8 @@ export class TextureRotationComponent extends ParticleComponent {
   }
 
   initialize(): void {
-    this.rotations = new Float32Array(this.particleSystem.config.maxParticles);
-    this.rotationSpeeds = new Float32Array(this.particleSystem.config.maxParticles);
+    this.rotations = new Float32Array(this.system.config.maxParticles);
+    this.rotationSpeeds = new Float32Array(this.system.config.maxParticles);
     this.rotationAttribute = new THREE.InstancedBufferAttribute(this.rotations, 1);
   }
 

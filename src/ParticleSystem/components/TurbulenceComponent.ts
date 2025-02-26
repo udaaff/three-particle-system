@@ -12,8 +12,8 @@ export class TurbulenceComponent extends ParticleComponent {
   private time: number = 0;
   private config: TurbulenceConfig;
 
-  constructor(particleSystem: any, config: TurbulenceConfig) {
-    super(particleSystem);
+  constructor(system: any, config: TurbulenceConfig) {
+    super(system);
     this.config = config;
   }
 

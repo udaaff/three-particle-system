@@ -9,15 +9,15 @@ export class GeometryRotationComponent extends ParticleComponent {
   private rotationAttribute!: THREE.InstancedBufferAttribute;
 
   constructor(
-    particleSystem: ParticleSystem,
+    system: ParticleSystem,
     private rotationRange: Range
   ) {
-    super(particleSystem);
+    super(system);
   }
 
   initialize(): void {
-    this.rotations = new Float32Array(this.particleSystem.config.maxParticles);
-    this.rotationSpeeds = new Float32Array(this.particleSystem.config.maxParticles);
+    this.rotations = new Float32Array(this.system.config.maxParticles);
+    this.rotationSpeeds = new Float32Array(this.system.config.maxParticles);
     this.rotationAttribute = new THREE.InstancedBufferAttribute(this.rotations, 1);
   }
 

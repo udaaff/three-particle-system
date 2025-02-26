@@ -9,11 +9,11 @@ import { ColorComponent } from './components/ColorComponent';
 import { GravityComponent } from './components/GravityComponent';
 import { FrictionComponent } from './components/FrictionComponent';
 import { CurvePath } from './CurvePath';
-import { ParticleSystemDebug } from './ParticleSystemDebug';
 import { ColorCurve, ColorRange, Curve, curve, Range, range } from './Range';
 import vertexShader from './shaders/particle.vert.glsl';
 import fragmentShader from './shaders/particle.frag.glsl';
 import { OpacityComponent } from './components/OpacityComponent';
+import { SizeComponent } from './components/SizeComponent';
 
 export type RenderMode =
   | { type: 'billboard' }
@@ -47,19 +47,18 @@ export interface ParticleSystemConfig {
   texture: THREE.Texture;
   maxParticles: number;
   blending?: Blending;
-  debug: boolean;
   renderMode: RenderMode;
   emitter: EmitterType;
   particle: {
     lifetime: Range;
     color?: THREE.Color | ColorRange | ColorCurve;
-    size: Range;
+    size?: number | Range | Curve;
     opacity?: number | Range | Curve;
     speedScale: Range;
     textureRotation?: Range;  // Скорость вращения текстуры в радианах/сек
     geometryRotation?: Range; // Скорость вращения геометрии в радианах/сек
   };
-  _physics?: {
+  physics?: {
     gravity?: THREE.Vector3;
     friction?: number;
     turbulence?: {
@@ -85,30 +84,25 @@ export default class ParticleSystem extends THREE.Object3D {
   private initialPositions!: Float32Array;
   private speedMultipliers!: Float32Array;
   private velocities!: Float32Array;
-  private debug?: ParticleSystemDebug;
   private components: ParticleComponent[] = [];
 
   constructor(config: Partial<ParticleSystemConfig> = {}) {
     super();
     this.config = this.getDefaultConfig(config);
 
-    if (this.config.debug) {
-      this.debug = new ParticleSystemDebug(this.config, this);
-    }
-
     // Инициализируем компоненты на основе конфига
-    if (this.config._physics?.turbulence) {
-      this.addComponent(new TurbulenceComponent(this, this.config._physics.turbulence));
+    if (this.config.physics?.turbulence) {
+      this.addComponent(new TurbulenceComponent(this, this.config.physics.turbulence));
     }
 
     // Добавляем компонент гравитации, если задан
-    if (this.config._physics?.gravity) {
-      this.addComponent(new GravityComponent(this, this.config._physics.gravity));
+    if (this.config.physics?.gravity) {
+      this.addComponent(new GravityComponent(this, this.config.physics.gravity));
     }
 
     // Добавляем компонент трения, если задан
-    if (this.config._physics?.friction) {
-      this.addComponent(new FrictionComponent(this, this.config._physics.friction));
+    if (this.config.physics?.friction) {
+      this.addComponent(new FrictionComponent(this, this.config.physics.friction));
     }
 
     // Добавляем компоненты вращения, если заданы соответствующие параметры
@@ -129,6 +123,10 @@ export default class ParticleSystem extends THREE.Object3D {
       this.addComponent(new OpacityComponent(this, this.config.particle.opacity));
     }
 
+    if (this.config.particle.size) {
+      this.addComponent(new SizeComponent(this, this.config.particle.size));
+    }
+
     this.setupParticleSystem();
   }
 
@@ -136,7 +134,6 @@ export default class ParticleSystem extends THREE.Object3D {
     return {
       texture: new THREE.Texture(),
       maxParticles: 50000,
-      debug: true,
       renderMode: {
         type: 'billboard'
       },
@@ -162,7 +159,7 @@ export default class ParticleSystem extends THREE.Object3D {
         textureRotation: range(-0.04, 0.04),
         geometryRotation: range(-0.04, 0.04),
       },
-      _physics: {
+      physics: {
         friction: 0.01,
         vortex: {
           strength: 0.1,
@@ -366,14 +363,12 @@ export default class ParticleSystem extends THREE.Object3D {
       this.velocities[index * 3 + 1] = direction.y * this.speedMultipliers[index];
       this.velocities[index * 3 + 2] = direction.z * this.speedMultipliers[index];
 
-      this.scales[index] = this.config.particle.size.lerp(0);
       this.ages[index] = 0;
     }
 
     this.activeParticles = endIndex;
 
     this.particles.geometry.attributes.instancePosition.needsUpdate = true;
-    this.particles.geometry.attributes.instanceScale.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
@@ -405,7 +400,6 @@ export default class ParticleSystem extends THREE.Object3D {
           this.initialPositions[currentIndex * 3 + 1] = this.initialPositions[i * 3 + 1];
           this.initialPositions[currentIndex * 3 + 2] = this.initialPositions[i * 3 + 2];
 
-          this.scales[currentIndex] = this.scales[i];
           this.ages[currentIndex] = this.ages[i];
           this.speedMultipliers[currentIndex] = this.speedMultipliers[i];
 
@@ -436,8 +430,6 @@ export default class ParticleSystem extends THREE.Object3D {
           this.positions[currentIndex * 3 + 2] += this.velocities[currentIndex * 3 + 2] * speedMultiplier * deltaTime;
         }
 
-        this.scales[currentIndex] = this.config.particle.size.lerp(lifePercent);
-
         currentIndex++;
       }
     }
@@ -445,20 +437,21 @@ export default class ParticleSystem extends THREE.Object3D {
     this.activeParticles = currentIndex;
     this.particles.count = currentIndex;
 
-    if (this.config.debug && this.debug) {
-      this.debug.updateParticleCount(this.activeParticles, this.config.maxParticles);
-      const size = this.config.particle.size;
-      this.debug.updatePixelCount(size, this.activeParticles);
-    }
-
     this.particles.geometry.attributes.instancePosition.needsUpdate = true;
-    this.particles.geometry.attributes.instanceScale.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
     for (const component of this.components) {
       component.markAttributesNeedUpdate();
     }
+  }
+
+  getDebugInfo(): { activeParticles: number; maxParticles: number; size?: number | Range | Curve } {
+    return {
+      activeParticles: this.activeParticles,
+      maxParticles: this.config.maxParticles,
+      size: this.config.particle.size
+    };
   }
 
   addComponent(component: ParticleComponent): void {

@@ -12,7 +12,9 @@ uniform mat4 viewMatrix;
 // Наши кастомные атрибуты
 attribute vec3 instancePosition;
 attribute vec3 instanceVelocity;
+#ifdef USE_SIZE
 attribute float instanceScale;
+#endif
 #ifdef USE_OPACITY
 attribute float instanceOpacity;
 #endif
@@ -151,9 +153,15 @@ void main() {
       cameraUp = vec3(rotatedUp.x, rotatedUp.y, cameraUp.z);
     #endif
 
+    #ifdef USE_SIZE
     vertexPosition =
       cameraRight * position.x * instanceScale +
       cameraUp * position.y * instanceScale;
+    #else
+    vertexPosition =
+      cameraRight * position.x +
+      cameraUp * position.y;
+    #endif
 
   #elif defined(RENDER_MODE_VELOCITY_ALIGNED)
     // Velocity aligned режим
@@ -180,9 +188,15 @@ void main() {
       up = vec3(rotatedUp.x, rotatedUp.y, up.z);
     #endif
 
+    #ifdef USE_SIZE
     vertexPosition =
       right * position.x * instanceScale +
       up * position.y * instanceScale;
+    #else
+    vertexPosition =
+      right * position.x +
+      up * position.y;
+    #endif
 
   #elif defined(RENDER_MODE_ORIENTED)
     // Oriented режим - произвольная ориентация
@@ -209,9 +223,15 @@ void main() {
       up = vec3(rotatedUp.x, rotatedUp.y, up.z);
     #endif
 
+    #ifdef USE_SIZE
     vertexPosition =
       right * position.x * instanceScale +
       up * position.y * instanceScale;
+    #else
+    vertexPosition =
+      right * position.x +
+      up * position.y;
+    #endif
   #endif
 
   vertexPosition += finalPosition;

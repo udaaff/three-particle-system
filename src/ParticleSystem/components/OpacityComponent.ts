@@ -12,24 +12,22 @@ export class OpacityComponent extends ParticleComponent {
   private needsUpdate: boolean = false;
 
   constructor(
-    particleSystem: ParticleSystem,
+    system: ParticleSystem,
     private opacity: OpacityValue
   ) {
-    super(particleSystem);
+    super(system);
     this.needsOpacityUpdate = opacity instanceof Curve || opacity instanceof Range;
   }
 
   initialize(): void {
-    this.opacities = new Float32Array(this.particleSystem.config.maxParticles);
+    this.opacities = new Float32Array(this.system.config.maxParticles);
     this.opacityAttribute = new THREE.InstancedBufferAttribute(this.opacities, 1);
   }
 
   onEmit(index: number): void {
     if (typeof this.opacity === 'number') {
       this.opacities[index] = this.opacity;
-    } else if (this.opacity instanceof Range) {
-      this.opacities[index] = this.opacity.lerp(0);
-    } else if (this.opacity instanceof Curve) {
+    } else {
       this.opacities[index] = this.opacity.lerp(0);
     }
     this.needsUpdate = true;

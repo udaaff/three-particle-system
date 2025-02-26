@@ -1,94 +1,97 @@
-import * as THREE from 'three';
-import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { ParticleSystemConfig } from './ParticleSystem';
+import { Curve, Range } from "./Range";
 
 export class ParticleSystemDebug {
-  private stats!: Stats;
-  private particlePanel!: any;    // Количество активных частиц
-  private pixelsPanel!: any;      // Нагрузка на GPU в мегапикселях
-  private updateTimePanel!: any;   // Время обновления частиц в мс
-  private debugPoint!: THREE.Points;
+  private particleCountElement: HTMLDivElement;
+  private pixelCountElement: HTMLDivElement;
+  private executionTimeElement: HTMLDivElement;
+  private fpsElement: HTMLDivElement;
+  private frameCount: number = 0;
+  private lastFpsUpdate: number = 0;
+  private lastDebugUpdate: number = 0;
+  private updateInterval: number = 500; // Обновляем каждые 500мс
 
-  constructor(private config: ParticleSystemConfig, private view: THREE.Object3D) {
-    this.setupStats();
-    this.setupDebugVisuals();
+  // Значения для сглаживания
+  private smoothedExecutionTime: number = 0;
+  private smoothedParticleCount: number = 0;
+  private smoothedPixelCount: number = 0;
+  private smoothingFactor: number = 0.1; // Фактор сглаживания (0-1)
+
+  constructor() {
+    // Создаем элементы для отображения дебаг информации
+    const debugContainer = document.createElement('div');
+    debugContainer.style.position = 'fixed';
+    debugContainer.style.top = '10px';
+    debugContainer.style.left = '10px';
+    debugContainer.style.color = 'white';
+    debugContainer.style.fontFamily = 'monospace';
+    debugContainer.style.zIndex = '1000';
+
+    this.particleCountElement = document.createElement('div');
+    this.pixelCountElement = document.createElement('div');
+    this.executionTimeElement = document.createElement('div');
+    this.fpsElement = document.createElement('div');
+
+    debugContainer.appendChild(this.fpsElement);
+    debugContainer.appendChild(this.particleCountElement);
+    debugContainer.appendChild(this.pixelCountElement);
+    debugContainer.appendChild(this.executionTimeElement);
+
+    document.body.appendChild(debugContainer);
   }
 
-  private setupStats(): void {
-    this.stats = new Stats();
-    this.stats.dom.style.cssText = 'position:fixed;top:0;left:100px;cursor:pointer;opacity:0.9;z-index:10000';
-    document.body.appendChild(this.stats.dom);
-
-    // Создаем три панели статистики:
-    this.particlePanel = new Stats.Panel('Particles', '#ff8', '#221');     // Желтая панель
-    this.pixelsPanel = new Stats.Panel('GPU Load (mp)', '#f88', '#211');   // Красная панель
-    this.updateTimePanel = new Stats.Panel('Update (ms)', '#8f8', '#121'); // Зеленая панель
-
-    this.stats.addPanel(this.particlePanel);
-    this.stats.addPanel(this.pixelsPanel);
-    this.stats.addPanel(this.updateTimePanel);
+  private smooth(current: number, target: number): number {
+    return current + this.smoothingFactor * (target - current);
   }
 
-  private setupDebugVisuals(): void {
-    if (this.config.emitter.shape === 'point' && this.config.emitter.point) {
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position',
-        new THREE.Float32BufferAttribute([
-          this.config.emitter.point.x,
-          this.config.emitter.point.y,
-          this.config.emitter.point.z
-        ], 3)
-      );
-
-      const material = new THREE.PointsMaterial({
-        color: 0x00ff00,
-        size: 0.1,
-        sizeAttenuation: true
-      });
-
-      this.debugPoint = new THREE.Points(geometry, material);
-      this.view.add(this.debugPoint);
-    } else if (this.config.emitter.shape === 'box' && this.config.emitter.size) {
-      const boxGeometry = new THREE.BoxGeometry(
-        this.config.emitter.size.x,
-        this.config.emitter.size.y,
-        this.config.emitter.size.z
-      );
-      const boxMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00ff00,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.5
-      });
-      const boxMesh = new THREE.Mesh(boxGeometry, boxMaterial);
-      // Смещаем бокс вверх на половину высоты, так как эмиттер смещен
-      boxMesh.position.y = this.config.emitter.size.y / 2;
-      this.view.add(boxMesh);
+  private updateDebugValues() {
+    const currentTime = performance.now();
+    if (currentTime > this.lastDebugUpdate + this.updateInterval) {
+      this.particleCountElement.textContent =
+        `Particles: ${Math.round(this.smoothedParticleCount)}/${this.maxParticles}`;
+      this.pixelCountElement.textContent =
+        `Estimated pixels: ${Math.round(this.smoothedPixelCount)}`;
+      this.executionTimeElement.textContent =
+        `Update time: ${this.smoothedExecutionTime.toFixed(2)}ms`;
+      this.lastDebugUpdate = currentTime;
     }
   }
 
-  beginFrame(): void {
-    this.stats.begin();
+  updateFps(currentTime: number) {
+    this.frameCount++;
+
+    // Обновляем FPS каждую секунду
+    if (currentTime > this.lastFpsUpdate + 1000) {
+      const fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastFpsUpdate));
+      this.fpsElement.textContent = `FPS: ${fps}`;
+      this.frameCount = 0;
+      this.lastFpsUpdate = currentTime;
+    }
   }
 
-  endFrame(): void {
-    this.stats.end();
+  private maxParticles: number = 0;
+
+  updateParticleCount(active: number, max: number) {
+    this.maxParticles = max;
+    this.smoothedParticleCount = this.smooth(this.smoothedParticleCount, active);
+    this.updateDebugValues();
   }
 
-  updateParticleCount(activeParticles: number, maxParticles: number): void {
-    this.particlePanel.update(activeParticles, maxParticles);
+  updatePixelCount(size: number | Range | Curve, activeParticles: number) {
+    let avgSize: number;
+    if (typeof size === 'number') {
+      avgSize = size;
+    } else if (size instanceof Range) {
+      avgSize = (size.from + size.to) / 2;
+    } else {
+      avgSize = size.lerp(0.5);
+    }
+    const pixelCount = Math.round(avgSize * avgSize * Math.PI * activeParticles);
+    this.smoothedPixelCount = this.smooth(this.smoothedPixelCount, pixelCount);
+    this.updateDebugValues();
   }
 
-  updatePixelCount(size: { from: number, to: number }, activeParticles: number): void {
-    const avgSize = (size.from + size.to) / 2;
-    const pixelSize = avgSize * window.innerHeight;
-    const pixelsPerParticle = pixelSize * pixelSize;
-    const megaPixels = Math.round(pixelsPerParticle * activeParticles / 1000000);
-
-    this.pixelsPanel.update(megaPixels, 1000);
-  }
-
-  updateExecutionTime(time: number): void {
-    this.updateTimePanel.update(time, 100);
+  updateExecutionTime(time: number) {
+    this.smoothedExecutionTime = this.smooth(this.smoothedExecutionTime, time);
+    this.updateDebugValues();
   }
 }

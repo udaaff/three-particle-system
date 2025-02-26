@@ -4,10 +4,10 @@ import ParticleSystem from '../ParticleSystem';
 
 export class GravityComponent extends ParticleComponent {
   constructor(
-    particleSystem: ParticleSystem,
+    system: ParticleSystem,
     private gravity: THREE.Vector3
   ) {
-    super(particleSystem);
+    super(system);
   }
 
   initialize(): void {
@@ -19,7 +19,7 @@ export class GravityComponent extends ParticleComponent {
   }
 
   onUpdate(index: number, deltaTime: number, _lifePercent: number): void {
-    const velocities = (this.particleSystem as any).velocities;
+    const velocities = (this.system as any).velocities;
     velocities[index * 3] += this.gravity.x * deltaTime;
     velocities[index * 3 + 1] += this.gravity.y * deltaTime;
     velocities[index * 3 + 2] += this.gravity.z * deltaTime;

@@ -4,6 +4,7 @@ import { range, curve } from "./ParticleSystem/Range";
 import ParticleSystem from "./ParticleSystem/ParticleSystem";
 import { Group, PerspectiveCamera, Texture, Vector3, WebGLRenderer } from "three";
 import { OrbitControls } from 'three/examples/jsm/Addons.js';
+import { ParticleSystemDebug } from './ParticleSystem/ParticleSystemDebug';
 
 document.addEventListener("DOMContentLoaded", async () => {
   await main();
@@ -45,12 +46,14 @@ async function main() {
   const group = new Group();
   scene.add(group);
 
+  // Создаем дебаг до создания ParticleSystem
+  const debug = new ParticleSystemDebug();
+
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture: texture,
     maxParticles: 100000,
     blending: THREE.AdditiveBlending,
-    debug: true,
     renderMode: {
       type: 'billboard',
     },
@@ -64,26 +67,27 @@ async function main() {
       }
     },
     particle: {
-      lifetime: range(20, 30),
+      lifetime: range(5, 10),
       size: range(0.1, 0.2),
       color: curve([
         [0, new THREE.Color(1, 0, 0)],     // Красный в начале
-        [0.5, new THREE.Color(1, 1, 0)],    // Желтый в середине
-        [1, new THREE.Color(1, 1, 1)]       // Белый в конце
+        [0.5, new THREE.Color(0, 1, 0)],    // Желтый в середине
+        [1, new THREE.Color(0, 0, 1)]       // Белый в конце
       ]),
       opacity: curve([
-        [0, 1],
+        [0, 0],
+        [0.2, 1],
         [0.8, 1],
         [1, 0]
       ]),
-      speedScale: range(1, 2),
+      speedScale: range(2, 3),
       textureRotation: range(-Math.PI, Math.PI)
     },
-    _physics: {
-      gravity: new Vector3(0, -1, 0),
+    physics: {
+      gravity: new Vector3(0, -0.6, 0),
       friction: 0.5,
       turbulence: {
-        strength: 0.2,
+        strength: 0.4,
         scale: 0.2,
         speed: 0.2
       }
@@ -98,10 +102,41 @@ async function main() {
     camera.updateProjectionMatrix();
   });
 
+  let lastUpdateTime = 0;
+
+  function updateDebugInfo(particleSystem: ParticleSystem) {
+    const debugInfo = particleSystem.getDebugInfo();
+    debug.updateParticleCount(debugInfo.activeParticles, debugInfo.maxParticles);
+
+    const size = debugInfo.size;
+    if (size) {
+      debug.updatePixelCount(size, debugInfo.activeParticles);
+    }
+  }
+
   function animate(time: number) {
     requestAnimationFrame(animate);
-    controls.update(); // Обновляем контролы
-    particleSystem.update(time);
+    controls.update();
+
+    if (lastUpdateTime === 0) {
+      lastUpdateTime = time;
+      return;
+    }
+    const deltaTime = (time - lastUpdateTime) / 1000;
+    lastUpdateTime = time;
+
+    if (Math.random() < 0.1) {
+      particleSystem.emit(1000);
+    }
+
+    const startTime = performance.now();
+    particleSystem.updateParticles(deltaTime);
+    const updateTime = performance.now() - startTime;
+
+    debug.updateExecutionTime(updateTime);
+    debug.updateFps(time);
+    updateDebugInfo(particleSystem);
+
     renderer.render(scene, camera);
   }
 

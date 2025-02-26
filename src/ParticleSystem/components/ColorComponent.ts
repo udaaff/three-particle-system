@@ -10,15 +10,15 @@ export class ColorComponent extends ParticleComponent {
   private needsUpdate: boolean = false;
 
   constructor(
-    particleSystem: ParticleSystem,
+    system: ParticleSystem,
     private color: THREE.Color | ColorRange | ColorCurve
   ) {
-    super(particleSystem);
+    super(system);
     this.needsColorUpdate = color instanceof ColorCurve || color instanceof ColorRange;
   }
 
   initialize(): void {
-    this.colors = new Float32Array(this.particleSystem.config.maxParticles * 3);
+    this.colors = new Float32Array(this.system.config.maxParticles * 3);
     this.colorAttribute = new THREE.InstancedBufferAttribute(this.colors, 3);
   }
 

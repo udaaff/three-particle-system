@@ -3,7 +3,11 @@ import * as THREE from 'three';
 import ParticleSystem from '../ParticleSystem';
 
 export abstract class ParticleComponent {
-  constructor(protected particleSystem: ParticleSystem) {}
+  protected system: ParticleSystem;
+
+  constructor(system: ParticleSystem) {
+    this.system = system;
+  }
 
   // Вызывается при инициализации системы
   abstract initialize(): void;
@@ -24,7 +28,7 @@ export abstract class ParticleComponent {
   abstract getAttributes(): Record<string, THREE.BufferAttribute>;
 
   // Возвращает необходимые униформы для шейдера
-  abstract getUniforms(): Record<string, { value: any }>;
+  abstract getUniforms(): Record<string, THREE.IUniform>;
 
   // Возвращает defines для шейдера
   abstract getDefines(): Record<string, boolean>;

@@ -4,10 +4,10 @@ import ParticleSystem from '../ParticleSystem';
 
 export class FrictionComponent extends ParticleComponent {
   constructor(
-    particleSystem: ParticleSystem,
+    system: ParticleSystem,
     private friction: number
   ) {
-    super(particleSystem);
+    super(system);
   }
 
   initialize(): void {
@@ -19,7 +19,7 @@ export class FrictionComponent extends ParticleComponent {
   }
 
   onUpdate(index: number, deltaTime: number, _lifePercent: number): void {
-    const velocities = (this.particleSystem as any).velocities;
+    const velocities = (this.system as any).velocities;
     const friction = Math.pow(1 - this.friction, deltaTime);
     velocities[index * 3] *= friction;
     velocities[index * 3 + 1] *= friction;
