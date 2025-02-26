@@ -26,7 +26,7 @@ export class TextureRotationComponent extends ParticleComponent {
     this.rotationSpeeds[index] = this.rotationRange.lerp(Math.random());
   }
 
-  onUpdate(index: number, deltaTime: number, lifePercent: number): void {
+  onUpdate(index: number, deltaTime: number, _lifePercent: number): void {
     this.rotations[index] += this.rotationSpeeds[index] * deltaTime;
   }
 

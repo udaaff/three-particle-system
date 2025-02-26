@@ -79,6 +79,11 @@ async function main() {
     _physics: {
       gravity: new Vector3(0, 0, 0),
       friction: 0.0,
+      turbulence: {
+        strength: 0.2,    // Увеличиваем силу турбулентности
+        scale: 0.2,       // Увеличиваем масштаб для более крупных завихрений
+        speed: 0.2        // Уменьшаем скорость для более плавного движения
+      },
       vortex: {
         strength: 0,
         center: new Vector3(0, 0, 0)

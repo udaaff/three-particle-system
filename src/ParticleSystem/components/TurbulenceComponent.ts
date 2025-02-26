@@ -21,15 +21,15 @@ export class TurbulenceComponent extends ParticleComponent {
     // Инициализация не требуется
   }
 
-  onEmit(index: number): void {
+  onEmit(_index: number): void {
     // Для турбулентности не нужно ничего делать при эмиссии
   }
 
-  onUpdate(index: number, deltaTime: number): void {
+  onUpdate(_index: number, deltaTime: number): void {
     this.time += deltaTime;
   }
 
-  compactParticleData(targetIndex: number, sourceIndex: number): void {}
+  compactParticleData(_targetIndex: number, _sourceIndex: number): void {}
 
   markAttributesNeedUpdate(): void {}
 

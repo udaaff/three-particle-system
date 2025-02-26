@@ -5,6 +5,7 @@ import { ParticleComponent } from './components/ParticleComponent';
 import { TurbulenceComponent } from './components/TurbulenceComponent';
 import { TextureRotationComponent } from './components/TextureRotationComponent';
 import { GeometryRotationComponent } from './components/GeometryRotationComponent';
+import { ColorComponent } from './components/ColorComponent';
 import { CurvePath } from './CurvePath';
 import { ParticleSystemDebug } from './ParticleSystemDebug';
 import { ColorCurve, ColorRange, Curve, curve, Range, range } from './Range';
@@ -79,9 +80,7 @@ export default class ParticleSystem extends THREE.Object3D {
   private opacities!: Float32Array;
   private ages!: Float32Array;
   private activeParticles!: number;
-  private colors!: Float32Array;
   private initialPositions!: Float32Array;
-  private needsColorUpdate: boolean = false;
   private speedMultipliers!: Float32Array;
   private velocities!: Float32Array;
   private debug?: ParticleSystemDebug;
@@ -107,6 +106,11 @@ export default class ParticleSystem extends THREE.Object3D {
     }
     if (this.config.particle.geometryRotation) {
       this.addComponent(new GeometryRotationComponent(this, this.config.particle.geometryRotation));
+    }
+
+    // Добавляем компонент цвета
+    if (this.config.particle.color) {
+      this.addComponent(new ColorComponent(this, this.config.particle.color));
     }
 
     this.setupParticleSystem();
@@ -166,7 +170,6 @@ export default class ParticleSystem extends THREE.Object3D {
     this.scales = new Float32Array(this.config.maxParticles);
     this.opacities = new Float32Array(this.config.maxParticles);
     this.ages = new Float32Array(this.config.maxParticles);
-    this.colors = new Float32Array(this.config.maxParticles * 3);
     this.initialPositions = new Float32Array(this.config.maxParticles * 3);
     this.speedMultipliers = new Float32Array(this.config.maxParticles);
     this.velocities = new Float32Array(this.config.maxParticles * 3);
@@ -177,8 +180,6 @@ export default class ParticleSystem extends THREE.Object3D {
       new THREE.InstancedBufferAttribute(this.scales, 1));
     instancedGeometry.setAttribute('instanceOpacity',
       new THREE.InstancedBufferAttribute(this.opacities, 1));
-    instancedGeometry.setAttribute('instanceColor',
-      new THREE.InstancedBufferAttribute(this.colors, 3));
     instancedGeometry.setAttribute('instanceVelocity',
       new THREE.InstancedBufferAttribute(this.velocities, 3));
 
@@ -201,10 +202,6 @@ export default class ParticleSystem extends THREE.Object3D {
     this.add(this.particles);
 
     this.activeParticles = 0;
-
-    // Определяем при инициализации, нужно ли обновлять цвет
-    this.needsColorUpdate = this.config.particle.color instanceof ColorCurve
-      || this.config.particle.color instanceof ColorRange;
   }
 
   private createShaderMaterial(texture: THREE.Texture): THREE.RawShaderMaterial {
@@ -360,30 +357,6 @@ export default class ParticleSystem extends THREE.Object3D {
       this.scales[index] = this.config.particle.size.lerp(0);
       this.opacities[index] = this.config.particle.opacity.lerp(0);
       this.ages[index] = 0;
-
-      // Устанавливаем цвета для новой частицы
-      if (!this.config.particle.color) {
-        // Используем цвет текстуры
-        this.colors[index * 3] = -1;
-      } else if (this.config.particle.color instanceof THREE.Color) {
-        // Один цвет
-        const color = this.config.particle.color;
-        this.colors[index * 3] = color.r;
-        this.colors[index * 3 + 1] = color.g;
-        this.colors[index * 3 + 2] = color.b;
-      } else if (this.config.particle.color instanceof ColorCurve) {
-        // Кривая цвета
-        const color = this.config.particle.color.lerp(0);
-        this.colors[index * 3] = color.r;
-        this.colors[index * 3 + 1] = color.g;
-        this.colors[index * 3 + 2] = color.b;
-      } else {
-        // Range цвета
-        const { from } = this.config.particle.color;
-        this.colors[index * 3] = from.r;
-        this.colors[index * 3 + 1] = from.g;
-        this.colors[index * 3 + 2] = from.b;
-      }
     }
 
     this.activeParticles = endIndex;
@@ -391,17 +364,11 @@ export default class ParticleSystem extends THREE.Object3D {
     this.particles.geometry.attributes.instancePosition.needsUpdate = true;
     this.particles.geometry.attributes.instanceScale.needsUpdate = true;
     this.particles.geometry.attributes.instanceOpacity.needsUpdate = true;
-    this.particles.geometry.attributes.instanceColor.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
     for (const component of this.components) {
       component.markAttributesNeedUpdate();
-    }
-
-    // Помечаем атрибут цвета только если он обновлялся
-    if (this.needsColorUpdate) {
-      this.particles.geometry.attributes.instanceColor.needsUpdate = true;
     }
 
     return actualCount;
@@ -432,11 +399,6 @@ export default class ParticleSystem extends THREE.Object3D {
           this.opacities[currentIndex] = this.opacities[i];
           this.ages[currentIndex] = this.ages[i];
           this.speedMultipliers[currentIndex] = this.speedMultipliers[i];
-
-          // Копируем цвета покомпонентно
-          this.colors[currentIndex * 3] = this.colors[i * 3];
-          this.colors[currentIndex * 3 + 1] = this.colors[i * 3 + 1];
-          this.colors[currentIndex * 3 + 2] = this.colors[i * 3 + 2];
 
           // Копируем данные из компонентов
           for (const component of this.components) {
@@ -478,17 +440,6 @@ export default class ParticleSystem extends THREE.Object3D {
         this.scales[currentIndex] = this.config.particle.size.lerp(lifePercent);
         this.opacities[currentIndex] = this.config.particle.opacity.lerp(lifePercent);
 
-        // Обновляем цвет только если это необходимо (Range или ColorCurve)
-        if (this.needsColorUpdate
-          && (this.config.particle.color instanceof ColorCurve
-            || this.config.particle.color instanceof ColorRange)
-        ) {
-          const color = this.config.particle.color.lerp(lifePercent);
-          this.colors[currentIndex * 3] = color.r;
-          this.colors[currentIndex * 3 + 1] = color.g;
-          this.colors[currentIndex * 3 + 2] = color.b;
-        }
-
         currentIndex++;
       }
     }
@@ -505,17 +456,11 @@ export default class ParticleSystem extends THREE.Object3D {
     this.particles.geometry.attributes.instancePosition.needsUpdate = true;
     this.particles.geometry.attributes.instanceScale.needsUpdate = true;
     this.particles.geometry.attributes.instanceOpacity.needsUpdate = true;
-    this.particles.geometry.attributes.instanceColor.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
     for (const component of this.components) {
       component.markAttributesNeedUpdate();
-    }
-
-    // Помечаем атрибут цвета только если он обновлялся
-    if (this.needsColorUpdate) {
-      this.particles.geometry.attributes.instanceColor.needsUpdate = true;
     }
   }
 
