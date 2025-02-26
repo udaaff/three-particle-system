@@ -1,16 +1,17 @@
 import * as THREE from 'three';
-
 import { Range } from '../Range';
 import { ParticleComponent } from './ParticleComponent';
+import ParticleSystem from '../ParticleSystem';
 
-export class RotationComponent extends ParticleComponent {
+export class TextureRotationComponent extends ParticleComponent {
   private rotations!: Float32Array;
   private rotationSpeeds!: Float32Array;
-  private rotationRange: Range;
 
-  constructor(particleSystem: any, rotationRange: Range) {
+  constructor(
+    particleSystem: ParticleSystem,
+    private rotationRange: Range
+  ) {
     super(particleSystem);
-    this.rotationRange = rotationRange;
   }
 
   initialize(): void {
@@ -37,27 +38,9 @@ export class RotationComponent extends ParticleComponent {
     return {};
   }
 
-  getVertexShaderChunk(): string {
-    return /* glsl */ `
-      // Rotation
-      vec2 rotatedUV = uv - 0.5;
-      float c = cos(instanceRotation);
-      float s = sin(instanceRotation);
-      rotatedUV = vec2(
-        rotatedUV.x * c - rotatedUV.y * s,
-        rotatedUV.x * s + rotatedUV.y * c
-      );
-      vUv = rotatedUV + 0.5;
-    `;
-  }
-
   getDefines(): Record<string, boolean> {
     return {
-      USE_ROTATION: true
+      USE_TEXTURE_ROTATION: true
     };
-  }
-
-  dispose(): void {
-    // Очистка ресурсов, если необходимо
   }
 }

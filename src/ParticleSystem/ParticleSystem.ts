@@ -3,6 +3,8 @@ import { Blending } from 'three';
 
 import { ParticleComponent } from './components/ParticleComponent';
 import { TurbulenceComponent } from './components/TurbulenceComponent';
+import { TextureRotationComponent } from './components/TextureRotationComponent';
+import { GeometryRotationComponent } from './components/GeometryRotationComponent';
 import { CurvePath } from './CurvePath';
 import { ParticleSystemDebug } from './ParticleSystemDebug';
 import { ColorCurve, ColorRange, Curve, curve, Range, range } from './Range';
@@ -14,28 +16,44 @@ export type RenderMode =
   | { type: 'velocity_aligned' }
   | { type: 'oriented', normal: THREE.Vector3, up?: THREE.Vector3 };
 
+export type Direction = {
+  vector: THREE.Vector3;   // Базовое направление
+  spread: number;          // Угол разброса в радианах
+  randomness?: number;     // Множитель случайности (0-1), по умолчанию 1
+};
+
+export type EmitterType =
+  | {
+      type: 'point';
+      position: THREE.Vector3;
+      direction?: Direction;
+    }
+  | {
+      type: 'box';
+      size: { x: number; y: number; z: number };
+      direction?: Direction;
+    }
+  | {
+      type: 'sphere';
+      radius: number;
+      direction?: Direction;
+    };
+
 export interface ParticleSystemConfig {
   texture: THREE.Texture;
   maxParticles: number;
   blending?: Blending;
   debug: boolean;
   renderMode: RenderMode;
-  emitter: {
-    shape: 'box' | 'sphere' | 'point';
-    size?: {
-      x: number;
-      y: number;
-      z: number;
-    };
-    point?: THREE.Vector3;
-  };
+  emitter: EmitterType;
   particle: {
     lifetime: Range;
     color?: THREE.Color | ColorRange | ColorCurve;
     size: Range;
     opacity: Range | Curve;
     speedScale: Range;
-    rotation: Range;  // Скорость вращения в радианах/сек
+    textureRotation?: Range;  // Скорость вращения текстуры в радианах/сек
+    geometryRotation?: Range; // Скорость вращения геометрии в радианах/сек
   };
   _physics: {
     gravity: THREE.Vector3;
@@ -55,8 +73,6 @@ export interface ParticleSystemConfig {
 
 export default class ParticleSystem extends THREE.Object3D {
   public config: ParticleSystemConfig;
-  private particlePanel: any;    // Количество активных частиц
-  private pixelsPanel: any;      // Нагрузка на GPU в мегапикселях
   private particles!: THREE.InstancedMesh;
   private positions!: Float32Array;
   private scales!: Float32Array;
@@ -69,8 +85,10 @@ export default class ParticleSystem extends THREE.Object3D {
   private speedMultipliers!: Float32Array;
   private velocities!: Float32Array;
   private debug?: ParticleSystemDebug;
-  private rotations!: Float32Array;      // Храним только скорость вращения
-  private rotationSpeeds!: Float32Array; // Скорость вращения
+  private textureRotations!: Float32Array;      // Текущий угол поворота текстуры
+  private textureRotationSpeeds!: Float32Array; // Скорость вращения текстуры
+  private geometryRotations!: Float32Array;      // Текущий угол поворота геометрии
+  private geometryRotationSpeeds!: Float32Array; // Скорость вращения геометрии
   private components: ParticleComponent[] = [];
   private lastUpdateTime: number = 0;
 
@@ -87,6 +105,14 @@ export default class ParticleSystem extends THREE.Object3D {
       this.addComponent(new TurbulenceComponent(this, this.config._physics.turbulence));
     }
 
+    // Добавляем компоненты вращения, если заданы соответствующие параметры
+    if (this.config.particle.textureRotation) {
+      this.addComponent(new TextureRotationComponent(this, this.config.particle.textureRotation));
+    }
+    if (this.config.particle.geometryRotation) {
+      this.addComponent(new GeometryRotationComponent(this, this.config.particle.geometryRotation));
+    }
+
     this.setupParticleSystem();
   }
 
@@ -99,7 +125,7 @@ export default class ParticleSystem extends THREE.Object3D {
         type: 'billboard'
       },
       emitter: {
-        shape: 'box' as const,
+        type: 'box',
         size: {
           x: 6,
           y: 1,
@@ -117,7 +143,8 @@ export default class ParticleSystem extends THREE.Object3D {
         ]),
         size: range(8, 8),
         speedScale: range(0, 0.2),
-        rotation: range(-0.04, 0.04),
+        textureRotation: range(-0.04, 0.04),
+        geometryRotation: range(-0.04, 0.04),
       },
       _physics: {
         gravity: new THREE.Vector3(0, 0.05, 0),
@@ -147,8 +174,10 @@ export default class ParticleSystem extends THREE.Object3D {
     this.initialPositions = new Float32Array(this.config.maxParticles * 3);
     this.speedMultipliers = new Float32Array(this.config.maxParticles);
     this.velocities = new Float32Array(this.config.maxParticles * 3);
-    this.rotations = new Float32Array(this.config.maxParticles);
-    this.rotationSpeeds = new Float32Array(this.config.maxParticles);
+    this.textureRotations = new Float32Array(this.config.maxParticles);
+    this.textureRotationSpeeds = new Float32Array(this.config.maxParticles);
+    this.geometryRotations = new Float32Array(this.config.maxParticles);
+    this.geometryRotationSpeeds = new Float32Array(this.config.maxParticles);
 
     instancedGeometry.setAttribute('instancePosition',
       new THREE.InstancedBufferAttribute(this.positions, 3));
@@ -159,7 +188,9 @@ export default class ParticleSystem extends THREE.Object3D {
     instancedGeometry.setAttribute('instanceColor',
       new THREE.InstancedBufferAttribute(this.colors, 3));
     instancedGeometry.setAttribute('instanceRotation',
-      new THREE.InstancedBufferAttribute(this.rotations, 1));
+      new THREE.InstancedBufferAttribute(this.textureRotations, 1));
+    instancedGeometry.setAttribute('instanceGeometryRotation',
+      new THREE.InstancedBufferAttribute(this.geometryRotations, 1));
     instancedGeometry.setAttribute('instanceVelocity',
       new THREE.InstancedBufferAttribute(this.velocities, 3));
 
@@ -237,37 +268,61 @@ export default class ParticleSystem extends THREE.Object3D {
   private getEmissionData(): { position: THREE.Vector3; direction: THREE.Vector3 } {
     const position = new THREE.Vector3();
     const direction = new THREE.Vector3();
+    const emitter = this.config.emitter;
 
-    switch (this.config.emitter.shape) {
+    // Получаем позицию в зависимости от типа эмиттера
+    switch (emitter.type) {
       case 'box': {
-        if (!this.config.emitter.size) {
-          throw new Error('Box emitter requires size configuration');
-        }
-        // Случайная позиция внутри бокса
         position.set(
-          (Math.random() - 0.5) * this.config.emitter.size.x,
-          (Math.random() - 0.5) * this.config.emitter.size.y + this.config.emitter.size.y / 2,
-          (Math.random() - 0.5) * this.config.emitter.size.z
+          (Math.random() - 0.5) * emitter.size.x,
+          (Math.random() - 0.5) * emitter.size.y + emitter.size.y / 2,
+          (Math.random() - 0.5) * emitter.size.z
         );
-
+        break;
+      }
+      case 'sphere': {
         direction.randomDirection();
+        position.copy(direction).multiplyScalar(emitter.radius);
         break;
       }
-      case 'point':
-      default: {
-        position.copy(this.config.emitter.point || new THREE.Vector3());
-        // Для velocity_aligned режима делаем более заметное направление
-        if (this.config.renderMode.type === 'velocity_aligned') {
-          direction.set(
-            (Math.random() - 0.5) * 2,
-            Math.abs(Math.random()), // Всегда вверх
-            (Math.random() - 0.5) * 2
-          ).normalize();
-        } else {
-          direction.randomDirection();
-        }
+      case 'point': {
+        position.copy(emitter.position);
         break;
       }
+    }
+
+    // Определяем направление
+    if (emitter.direction) {
+      const { vector, spread, randomness = 1 } = emitter.direction;
+
+      // Создаем случайное направление в конусе
+      const phi = Math.random() * Math.PI * 2; // Угол вокруг оси
+      const cosSpread = Math.cos(spread);
+      const cosTheta = cosSpread + (1 - cosSpread) * Math.random(); // Интерполяция между cos(spread) и 1
+      const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
+
+      // Создаем вектор в конусе
+      direction.set(
+        sinTheta * Math.cos(phi),
+        sinTheta * Math.sin(phi),
+        cosTheta
+      );
+
+      // Поворачиваем конус в направлении вектора
+      const quaternion = new THREE.Quaternion();
+      const up = new THREE.Vector3(0, 0, 1);
+      quaternion.setFromUnitVectors(up, vector.normalize());
+      direction.applyQuaternion(quaternion);
+
+      // Добавляем случайность
+      if (randomness > 0) {
+        const random = new THREE.Vector3().randomDirection().multiplyScalar(randomness);
+        direction.lerp(random, Math.random() * 0.2);
+        direction.normalize();
+      }
+    } else {
+      // Если направление не задано, используем случайное
+      direction.randomDirection();
     }
 
     return { position, direction };
@@ -306,23 +361,16 @@ export default class ParticleSystem extends THREE.Object3D {
       this.velocities[index * 3 + 1] = direction.y * this.speedMultipliers[index];
       this.velocities[index * 3 + 2] = direction.z * this.speedMultipliers[index];
 
-      // Отладочный вывод для первых трех частиц
-      if (index < 3) {
-        console.log(`Particle ${index} velocity:`,
-          this.velocities[index * 3],
-          this.velocities[index * 3 + 1],
-          this.velocities[index * 3 + 2],
-          'Speed multiplier:', this.speedMultipliers[index]
-        );
-      }
 
       this.scales[index] = this.config.particle.size.lerp(0);
       this.opacities[index] = this.config.particle.opacity.lerp(0);
       this.ages[index] = 0;
 
       // Сохраняем случайную скорость вращения
-      this.rotations[index] = 0;
-      this.rotationSpeeds[index] = this.config.particle.rotation.lerp(Math.random()); // Скорость вращения
+      this.textureRotations[index] = 0;
+      this.textureRotationSpeeds[index] = this.config.particle.textureRotation?.lerp(Math.random()) || 0;
+      this.geometryRotations[index] = 0;
+      this.geometryRotationSpeeds[index] = this.config.particle.geometryRotation?.lerp(Math.random()) || 0;
 
       // Устанавливаем цвета для новой частицы
       if (!this.config.particle.color) {
@@ -356,6 +404,7 @@ export default class ParticleSystem extends THREE.Object3D {
     this.particles.geometry.attributes.instanceOpacity.needsUpdate = true;
     this.particles.geometry.attributes.instanceColor.needsUpdate = true;
     this.particles.geometry.attributes.instanceRotation.needsUpdate = true;
+    this.particles.geometry.attributes.instanceGeometryRotation.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     return actualCount;
@@ -379,16 +428,6 @@ export default class ParticleSystem extends THREE.Object3D {
           this.velocities[currentIndex * 3 + 1] = this.velocities[i * 3 + 1];
           this.velocities[currentIndex * 3 + 2] = this.velocities[i * 3 + 2];
 
-          // Обновляем скорости под действием гравитации
-          this.velocities[currentIndex * 3] += this.config._physics.gravity.x * deltaTime;
-          this.velocities[currentIndex * 3 + 1] += this.config._physics.gravity.y * deltaTime;
-          this.velocities[currentIndex * 3 + 2] += this.config._physics.gravity.z * deltaTime;
-
-          // Применяем трение
-          this.velocities[currentIndex * 3] *= (1.0 - this.config._physics.friction * deltaTime);
-          this.velocities[currentIndex * 3 + 1] *= (1.0 - this.config._physics.friction * deltaTime);
-          this.velocities[currentIndex * 3 + 2] *= (1.0 - this.config._physics.friction * deltaTime);
-
           this.initialPositions[currentIndex * 3] = this.initialPositions[i * 3];
           this.initialPositions[currentIndex * 3 + 1] = this.initialPositions[i * 3 + 1];
           this.initialPositions[currentIndex * 3 + 2] = this.initialPositions[i * 3 + 2];
@@ -397,14 +436,26 @@ export default class ParticleSystem extends THREE.Object3D {
           this.opacities[currentIndex] = this.opacities[i];
           this.ages[currentIndex] = this.ages[i];
           this.speedMultipliers[currentIndex] = this.speedMultipliers[i];
-          this.rotations[currentIndex] = this.rotations[i];
-          this.rotationSpeeds[currentIndex] = this.rotationSpeeds[i];
+          this.textureRotations[currentIndex] = this.textureRotations[i];
+          this.textureRotationSpeeds[currentIndex] = this.textureRotationSpeeds[i];
+          this.geometryRotations[currentIndex] = this.geometryRotations[i];
+          this.geometryRotationSpeeds[currentIndex] = this.geometryRotationSpeeds[i];
 
           // Копируем цвета покомпонентно
           this.colors[currentIndex * 3] = this.colors[i * 3];
           this.colors[currentIndex * 3 + 1] = this.colors[i * 3 + 1];
           this.colors[currentIndex * 3 + 2] = this.colors[i * 3 + 2];
         }
+
+        // Обновляем скорости под действием гравитации
+        this.velocities[currentIndex * 3] += this.config._physics.gravity.x * deltaTime;
+        this.velocities[currentIndex * 3 + 1] += this.config._physics.gravity.y * deltaTime;
+        this.velocities[currentIndex * 3 + 2] += this.config._physics.gravity.z * deltaTime;
+
+        // Применяем трение
+        this.velocities[currentIndex * 3] *= (1.0 - this.config._physics.friction * deltaTime);
+        this.velocities[currentIndex * 3 + 1] *= (1.0 - this.config._physics.friction * deltaTime);
+        this.velocities[currentIndex * 3 + 2] *= (1.0 - this.config._physics.friction * deltaTime);
 
         const lifePercent = this.ages[currentIndex] / this.config.particle.lifetime.to;
 
@@ -414,7 +465,8 @@ export default class ParticleSystem extends THREE.Object3D {
         }
 
         // Обновляем угол поворота используя скорость
-        this.rotations[currentIndex] += this.rotationSpeeds[currentIndex] * deltaTime;
+        this.textureRotations[currentIndex] += this.textureRotationSpeeds[currentIndex] * deltaTime;
+        this.geometryRotations[currentIndex] += this.geometryRotationSpeeds[currentIndex] * deltaTime;
 
         if (this.config.path) {
           const point = this.config.path.getPoint(lifePercent);
@@ -451,10 +503,10 @@ export default class ParticleSystem extends THREE.Object3D {
     this.activeParticles = currentIndex;
     this.particles.count = currentIndex;
 
-    if (this.config.debug && this.particlePanel) {
-      this.particlePanel.updateParticleCount(this.activeParticles, this.config.maxParticles);
+    if (this.config.debug && this.debug) {
+      this.debug.updateParticleCount(this.activeParticles, this.config.maxParticles);
       const size = this.config.particle.size;
-      this.pixelsPanel.updatePixelCount(size, this.activeParticles);
+      this.debug.updatePixelCount(size, this.activeParticles);
     }
 
     this.particles.geometry.attributes.instancePosition.needsUpdate = true;
@@ -462,6 +514,7 @@ export default class ParticleSystem extends THREE.Object3D {
     this.particles.geometry.attributes.instanceOpacity.needsUpdate = true;
     this.particles.geometry.attributes.instanceColor.needsUpdate = true;
     this.particles.geometry.attributes.instanceRotation.needsUpdate = true;
+    this.particles.geometry.attributes.instanceGeometryRotation.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибут цвета только если он обновлялся
@@ -484,7 +537,9 @@ export default class ParticleSystem extends THREE.Object3D {
     this.lastUpdateTime = currentTime;
 
     // Эмиттируем частицы каждый кадр
-    this.emit(10);
+    if (Math.random() < 1) {
+      this.emit(1);
+    }
 
     if (this.config.debug && this.debug) {
       const startTime = performance.now();

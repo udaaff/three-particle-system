@@ -120,6 +120,24 @@ void main() {
     vec3 cameraRight = vec3(viewMatrix[0].x, viewMatrix[1].x, viewMatrix[2].x);
     vec3 cameraUp = vec3(viewMatrix[0].y, viewMatrix[1].y, viewMatrix[2].y);
 
+    // Применяем вращение к базису
+    vec2 rotatedRight = vec2(cameraRight.x, cameraRight.y);
+    vec2 rotatedUp = vec2(cameraUp.x, cameraUp.y);
+
+    #ifdef USE_ROTATION
+      // Поворачиваем базисные векторы
+      rotatedRight = vec2(
+        rotatedRight.x * c - rotatedRight.y * s,
+        rotatedRight.x * s + rotatedRight.y * c
+      );
+      rotatedUp = vec2(
+        rotatedUp.x * c - rotatedUp.y * s,
+        rotatedUp.x * s + rotatedUp.y * c
+      );
+      cameraRight = vec3(rotatedRight.x, rotatedRight.y, cameraRight.z);
+      cameraUp = vec3(rotatedUp.x, rotatedUp.y, cameraUp.z);
+    #endif
+
     vertexPosition =
       cameraRight * position.x * instanceScale +
       cameraUp * position.y * instanceScale;
@@ -127,30 +145,56 @@ void main() {
   #elif defined(RENDER_MODE_VELOCITY_ALIGNED)
     // Velocity aligned режим
     vec3 velocity = normalize(instanceVelocity);
-
-    // Создаем базис для частицы, используя вектор скорости как forward
     vec3 forward = velocity;
     vec3 right = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
     vec3 up = normalize(cross(right, forward));
 
-    // Используем этот базис для позиционирования вершин
+    #ifdef USE_ROTATION
+      // Поворачиваем базисные векторы вокруг forward
+      vec2 rotatedRight = vec2(right.x, right.y);
+      vec2 rotatedUp = vec2(up.x, up.y);
+      rotatedRight = vec2(
+        rotatedRight.x * c - rotatedRight.y * s,
+        rotatedRight.x * s + rotatedRight.y * c
+      );
+      rotatedUp = vec2(
+        rotatedUp.x * c - rotatedUp.y * s,
+        rotatedUp.x * s + rotatedUp.y * c
+      );
+      right = vec3(rotatedRight.x, rotatedRight.y, right.z);
+      up = vec3(rotatedUp.x, rotatedUp.y, up.z);
+    #endif
+
     vertexPosition =
-        right * position.x * instanceScale +
-        up * position.y * instanceScale;
+      right * position.x * instanceScale +
+      up * position.y * instanceScale;
 
   #elif defined(RENDER_MODE_ORIENTED)
     // Oriented режим - произвольная ориентация
     vec3 normal = normalize(uNormal);
     vec3 up = normalize(uUp);
-
-    // Создаем базис для частицы
     vec3 right = normalize(cross(normal, up));
     up = normalize(cross(right, normal));
 
-    // Используем этот базис для позиционирования вершин
+    #ifdef USE_ROTATION
+      // Поворачиваем базисные векторы вокруг normal
+      vec2 rotatedRight = vec2(right.x, right.y);
+      vec2 rotatedUp = vec2(up.x, up.y);
+      rotatedRight = vec2(
+        rotatedRight.x * c - rotatedRight.y * s,
+        rotatedRight.x * s + rotatedRight.y * c
+      );
+      rotatedUp = vec2(
+        rotatedUp.x * c - rotatedUp.y * s,
+        rotatedUp.x * s + rotatedUp.y * c
+      );
+      right = vec3(rotatedRight.x, rotatedRight.y, right.z);
+      up = vec3(rotatedUp.x, rotatedUp.y, up.z);
+    #endif
+
     vertexPosition =
-        right * position.x * instanceScale +
-        up * position.y * instanceScale;
+      right * position.x * instanceScale +
+      up * position.y * instanceScale;
   #endif
 
   vertexPosition += finalPosition;
