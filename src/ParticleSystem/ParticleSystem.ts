@@ -14,6 +14,7 @@ import vertexShader from './shaders/particle.vert.glsl';
 import fragmentShader from './shaders/particle.frag.glsl';
 import { OpacityComponent } from './components/OpacityComponent';
 import { SizeComponent } from './components/SizeComponent';
+import { PositioningComponent } from './components/PositioningComponent';
 
 export type RenderMode =
   | { type: 'billboard' }
@@ -77,14 +78,10 @@ export interface ParticleSystemConfig {
 export default class ParticleSystem extends THREE.Object3D {
   public config: ParticleSystemConfig;
   private particles!: THREE.InstancedMesh;
-  private positions!: Float32Array;
-  private scales!: Float32Array;
-  private ages!: Float32Array;
   public activeParticles!: number;
-  private initialPositions!: Float32Array;
-  private speedMultipliers!: Float32Array;
-  private velocities!: Float32Array;
   private components: ParticleComponent[] = [];
+  private ages!: Float32Array;
+  private positioningComponent!: PositioningComponent;
 
   private static readonly componentTypes = [
     TurbulenceComponent,
@@ -101,7 +98,11 @@ export default class ParticleSystem extends THREE.Object3D {
     super();
     this.config = this.getDefaultConfig(config);
 
-    // Инициализируем компоненты на основе конфига
+    // Сначала инициализируем PositioningComponent, так как он обязателен
+    // this.positioningComponent = new PositioningComponent(this);
+    // this.addComponent(this.positioningComponent);
+
+    // Затем инициализируем остальные компоненты на основе конфига
     for (const ComponentType of ParticleSystem.componentTypes) {
       if (ComponentType.getConfigValue(this.config)) {
         this.addComponent(new ComponentType(this));
@@ -140,13 +141,6 @@ export default class ParticleSystem extends THREE.Object3D {
         textureRotation: range(-0.04, 0.04),
         geometryRotation: range(-0.04, 0.04),
       },
-      physics: {
-        friction: 0.01,
-        vortex: {
-          strength: 0.1,
-          center: new THREE.Vector3(0, 0.5, 0)
-        }
-      },
       ...config
     };
   }
@@ -159,19 +153,7 @@ export default class ParticleSystem extends THREE.Object3D {
     instancedGeometry.attributes.position = baseGeometry.attributes.position;
     instancedGeometry.attributes.uv = baseGeometry.attributes.uv;
 
-    this.positions = new Float32Array(this.config.maxParticles * 3);
-    this.scales = new Float32Array(this.config.maxParticles);
     this.ages = new Float32Array(this.config.maxParticles);
-    this.initialPositions = new Float32Array(this.config.maxParticles * 3);
-    this.speedMultipliers = new Float32Array(this.config.maxParticles);
-    this.velocities = new Float32Array(this.config.maxParticles * 3);
-
-    instancedGeometry.setAttribute('instancePosition',
-      new THREE.InstancedBufferAttribute(this.positions, 3));
-    instancedGeometry.setAttribute('instanceScale',
-      new THREE.InstancedBufferAttribute(this.scales, 1));
-    instancedGeometry.setAttribute('instanceVelocity',
-      new THREE.InstancedBufferAttribute(this.velocities, 3));
 
     // Добавляем атрибуты от компонентов
     for (const component of this.components) {
@@ -248,69 +230,6 @@ export default class ParticleSystem extends THREE.Object3D {
     });
   }
 
-  private getEmissionData(): { position: THREE.Vector3; direction: THREE.Vector3 } {
-    const position = new THREE.Vector3();
-    const direction = new THREE.Vector3();
-    const emitter = this.config.emitter;
-
-    // Получаем позицию в зависимости от типа эмиттера
-    switch (emitter.type) {
-      case 'box': {
-        position.set(
-          (Math.random() - 0.5) * emitter.size.x,
-          (Math.random() - 0.5) * emitter.size.y + emitter.size.y / 2,
-          (Math.random() - 0.5) * emitter.size.z
-        );
-        break;
-      }
-      case 'sphere': {
-        direction.randomDirection();
-        position.copy(direction).multiplyScalar(emitter.radius);
-        break;
-      }
-      case 'point': {
-        position.copy(emitter.position);
-        break;
-      }
-    }
-
-    // Определяем направление
-    if (emitter.direction) {
-      const { vector, spread, randomness = 1 } = emitter.direction;
-
-      // Создаем случайное направление в конусе
-      const phi = Math.random() * Math.PI * 2; // Угол вокруг оси
-      const cosSpread = Math.cos(spread);
-      const cosTheta = cosSpread + (1 - cosSpread) * Math.random(); // Интерполяция между cos(spread) и 1
-      const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
-
-      // Создаем вектор в конусе
-      direction.set(
-        sinTheta * Math.cos(phi),
-        sinTheta * Math.sin(phi),
-        cosTheta
-      );
-
-      // Поворачиваем конус в направлении вектора
-      const quaternion = new THREE.Quaternion();
-      const up = new THREE.Vector3(0, 0, 1);
-      quaternion.setFromUnitVectors(up, vector.normalize());
-      direction.applyQuaternion(quaternion);
-
-      // Добавляем случайность
-      if (randomness > 0) {
-        const random = new THREE.Vector3().randomDirection().multiplyScalar(randomness);
-        direction.lerp(random, Math.random() * 0.2);
-        direction.normalize();
-      }
-    } else {
-      // Если направление не задано, используем случайное
-      direction.randomDirection();
-    }
-
-    return { position, direction };
-  }
-
   emit(count: number): number {
     const startIndex = this.activeParticles;
     const endIndex = Math.min(startIndex + count, this.config.maxParticles);
@@ -318,39 +237,15 @@ export default class ParticleSystem extends THREE.Object3D {
 
     for (let i = 0; i < actualCount; i++) {
       const index = startIndex + i;
+      this.ages[index] = 0;
 
       // Вызываем onEmit для каждого компонента
       for (const component of this.components) {
         component.onEmit(index);
       }
-
-      const { position, direction } = this.getEmissionData();
-
-      // Сохраняем начальную позицию
-      this.initialPositions[index * 3] = position.x;
-      this.initialPositions[index * 3 + 1] = position.y;
-      this.initialPositions[index * 3 + 2] = position.z;
-
-      // Сохраняем случайный множитель скорости
-      this.speedMultipliers[index] = this.config.particle.speedScale.lerp(Math.random());
-
-      // Устанавливаем текущую позицию равной начальной
-      this.positions[index * 3] = position.x;
-      this.positions[index * 3 + 1] = position.y;
-      this.positions[index * 3 + 2] = position.z;
-
-      // Сохраняем направление как начальную скорость
-      this.velocities[index * 3] = direction.x * this.speedMultipliers[index];
-      this.velocities[index * 3 + 1] = direction.y * this.speedMultipliers[index];
-      this.velocities[index * 3 + 2] = direction.z * this.speedMultipliers[index];
-
-      this.ages[index] = 0;
     }
 
     this.activeParticles = endIndex;
-
-    this.particles.geometry.attributes.instancePosition.needsUpdate = true;
-    this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
     for (const component of this.components) {
@@ -365,50 +260,20 @@ export default class ParticleSystem extends THREE.Object3D {
 
     for (let i = 0; i < this.activeParticles; i++) {
       this.ages[i] += deltaTime;
+      const lifePercent = this.ages[i] / this.config.particle.lifetime.to;
 
       if (this.ages[i] < this.config.particle.lifetime.to) {
         if (currentIndex !== i) {
-          // Копируем все параметры частицы
-          this.positions[currentIndex * 3] = this.positions[i * 3];
-          this.positions[currentIndex * 3 + 1] = this.positions[i * 3 + 1];
-          this.positions[currentIndex * 3 + 2] = this.positions[i * 3 + 2];
-
-          this.velocities[currentIndex * 3] = this.velocities[i * 3];
-          this.velocities[currentIndex * 3 + 1] = this.velocities[i * 3 + 1];
-          this.velocities[currentIndex * 3 + 2] = this.velocities[i * 3 + 2];
-
-          this.initialPositions[currentIndex * 3] = this.initialPositions[i * 3];
-          this.initialPositions[currentIndex * 3 + 1] = this.initialPositions[i * 3 + 1];
-          this.initialPositions[currentIndex * 3 + 2] = this.initialPositions[i * 3 + 2];
-
-          this.ages[currentIndex] = this.ages[i];
-          this.speedMultipliers[currentIndex] = this.speedMultipliers[i];
-
           // Копируем данные из компонентов
           for (const component of this.components) {
             component.compactParticleData(currentIndex, i);
           }
+          this.ages[currentIndex] = this.ages[i];
         }
-
-        const lifePercent = this.ages[currentIndex] / this.config.particle.lifetime.to;
 
         // Обновляем каждый компонент
         for (const component of this.components) {
           component.onUpdate(currentIndex, deltaTime, lifePercent);
-        }
-
-        if (this.config.path) {
-          const point = this.config.path.getPoint(lifePercent);
-
-          this.positions[currentIndex * 3] = this.initialPositions[currentIndex * 3] + point.x;
-          this.positions[currentIndex * 3 + 1] = this.initialPositions[currentIndex * 3 + 1] + point.y;
-          this.positions[currentIndex * 3 + 2] = this.initialPositions[currentIndex * 3 + 2] + point.z;
-        } else {
-          const speedMultiplier = this.speedMultipliers[currentIndex];
-          // Используем только направление и множитель скорости
-          this.positions[currentIndex * 3] += this.velocities[currentIndex * 3] * speedMultiplier * deltaTime;
-          this.positions[currentIndex * 3 + 1] += this.velocities[currentIndex * 3 + 1] * speedMultiplier * deltaTime;
-          this.positions[currentIndex * 3 + 2] += this.velocities[currentIndex * 3 + 2] * speedMultiplier * deltaTime;
         }
 
         currentIndex++;
@@ -417,9 +282,6 @@ export default class ParticleSystem extends THREE.Object3D {
 
     this.activeParticles = currentIndex;
     this.particles.count = currentIndex;
-
-    this.particles.geometry.attributes.instancePosition.needsUpdate = true;
-    this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
     for (const component of this.components) {
@@ -438,5 +300,13 @@ export default class ParticleSystem extends THREE.Object3D {
   addComponent(component: ParticleComponent): void {
     this.components.push(component);
     component.initialize();
+  }
+
+  getComponent<T extends ParticleComponent>(componentType: { new (...args: any[]): T }): T | undefined {
+    // Проверяем, является ли запрашиваемый компонент PositioningComponent
+    if (this.positioningComponent instanceof componentType) {
+      return this.positioningComponent;
+    }
+    return this.components.find(c => c instanceof componentType) as T | undefined;
   }
 }

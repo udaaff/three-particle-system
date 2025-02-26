@@ -52,7 +52,7 @@ async function main() {
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture: texture,
-    maxParticles: 2000,
+    maxParticles: 200000,
     blending: THREE.AdditiveBlending,
     renderMode: {
       type: 'billboard',
@@ -60,38 +60,38 @@ async function main() {
     emitter: {
       type: 'point',
       position: new Vector3(0, 1, 0),
-      direction: {
-        vector: new Vector3(0, 1, 0),  // Направление вверх
-        spread: Math.PI / 2,           // Угол разброса 45 градусов
-        randomness: 0.3                // Небольшая случайность для естественности
-      }
+      // direction: {
+      //   vector: new Vector3(0, 1, 0),  // Направление вверх
+      //   spread: Math.PI / 2,           // Угол разброса 45 градусов
+      //   randomness: 0.3                // Небольшая случайность для естественности
+      // }
     },
     particle: {
       lifetime: range(5, 10),
-      size: range(0.1, 0.2),
-      color: curve([
-        [0, new THREE.Color(1, 0, 0)],     // Красный в начале
-        [0.5, new THREE.Color(0, 1, 0)],    // Желтый в середине
-        [1, new THREE.Color(0, 0, 1)]       // Белый в конце
-      ]),
-      opacity: curve([
-        [0, 0],
-        [0.2, 1],
-        [0.8, 1],
-        [1, 0]
-      ]),
+      size: range(0.01, 0.02),
+      // color: curve([
+      //   [0, new THREE.Color(1, 0, 0)],     // Красный в начале
+      //   [0.5, new THREE.Color(0, 1, 0)],    // Желтый в середине
+      //   [1, new THREE.Color(0, 0, 1)]       // Белый в конце
+      // ]),
+      // opacity: curve([
+      //   [0, 0],
+      //   [0.2, 1],
+      //   [0.8, 1],
+      //   [1, 0]
+      // ]),
       speedScale: range(2, 3),
-      textureRotation: range(-Math.PI, Math.PI)
+      // textureRotation: range(-Math.PI, Math.PI)
     },
-    physics: {
-      gravity: new Vector3(0, -0.6, 0),
-      friction: 0.5,
-      turbulence: {
-        strength: 0.4,
-        scale: 0.2,
-        speed: 0.2
-      }
-    }
+    // physics: {
+    //   gravity: new Vector3(0, -0.6, 0),
+    //   friction: 0.5,
+    //   turbulence: {
+    //     strength: 0.4,
+    //     scale: 0.2,
+    //     speed: 0.2
+    //   }
+    // }
   });
 
   scene.add(particleSystem);
@@ -125,8 +125,8 @@ async function main() {
     const deltaTime = (time - lastUpdateTime) / 1000;
     lastUpdateTime = time;
 
+    particleSystem.emit(200);
     if (Math.random() < 0.1) {
-      particleSystem.emit(100);
     }
 
     const startTime = performance.now();
