@@ -14,6 +14,12 @@ export abstract class ParticleComponent {
   // Вызывается при обновлении частицы
   abstract onUpdate(index: number, deltaTime: number, lifePercent: number): void;
 
+  // Перемещает данные частицы при уплотнении массива
+  abstract compactParticleData(targetIndex: number, sourceIndex: number): void;
+
+  // Помечает атрибуты компонента как требующие обновления
+  abstract markAttributesNeedUpdate(): void;
+
   // Возвращает необходимые атрибуты для шейдера
   abstract getAttributes(): Record<string, THREE.BufferAttribute>;
 

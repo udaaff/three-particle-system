@@ -6,6 +6,7 @@ import ParticleSystem from '../ParticleSystem';
 export class TextureRotationComponent extends ParticleComponent {
   private rotations!: Float32Array;
   private rotationSpeeds!: Float32Array;
+  private rotationAttribute!: THREE.InstancedBufferAttribute;
 
   constructor(
     particleSystem: ParticleSystem,
@@ -17,6 +18,7 @@ export class TextureRotationComponent extends ParticleComponent {
   initialize(): void {
     this.rotations = new Float32Array(this.particleSystem.config.maxParticles);
     this.rotationSpeeds = new Float32Array(this.particleSystem.config.maxParticles);
+    this.rotationAttribute = new THREE.InstancedBufferAttribute(this.rotations, 1);
   }
 
   onEmit(index: number): void {
@@ -24,13 +26,22 @@ export class TextureRotationComponent extends ParticleComponent {
     this.rotationSpeeds[index] = this.rotationRange.lerp(Math.random());
   }
 
-  onUpdate(index: number, deltaTime: number): void {
+  onUpdate(index: number, deltaTime: number, lifePercent: number): void {
     this.rotations[index] += this.rotationSpeeds[index] * deltaTime;
+  }
+
+  compactParticleData(targetIndex: number, sourceIndex: number): void {
+    this.rotations[targetIndex] = this.rotations[sourceIndex];
+    this.rotationSpeeds[targetIndex] = this.rotationSpeeds[sourceIndex];
+  }
+
+  markAttributesNeedUpdate(): void {
+    this.rotationAttribute.needsUpdate = true;
   }
 
   getAttributes(): Record<string, THREE.BufferAttribute> {
     return {
-      instanceRotation: new THREE.InstancedBufferAttribute(this.rotations, 1)
+      instanceRotation: this.rotationAttribute
     };
   }
 

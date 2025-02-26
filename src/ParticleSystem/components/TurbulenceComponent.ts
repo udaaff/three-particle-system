@@ -29,6 +29,10 @@ export class TurbulenceComponent extends ParticleComponent {
     this.time += deltaTime;
   }
 
+  compactParticleData(targetIndex: number, sourceIndex: number): void {}
+
+  markAttributesNeedUpdate(): void {}
+
   getAttributes(): Record<string, THREE.BufferAttribute> {
     return {};
   }
