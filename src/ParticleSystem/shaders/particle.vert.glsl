@@ -13,7 +13,9 @@ uniform mat4 viewMatrix;
 attribute vec3 instancePosition;
 attribute vec3 instanceVelocity;
 attribute float instanceScale;
+#ifdef USE_OPACITY
 attribute float instanceOpacity;
+#endif
 attribute vec3 instanceColor;
 attribute float instanceRotation;
 attribute float instanceGeometryRotation;
@@ -109,7 +111,10 @@ void main() {
   #endif
   vUv = finalUV;
 
+  #ifdef USE_OPACITY
   vOpacity = instanceOpacity;
+  #endif
+
   vColor = instanceColor;
 
   vec3 finalPosition = instancePosition;

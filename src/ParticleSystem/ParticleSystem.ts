@@ -13,6 +13,7 @@ import { ParticleSystemDebug } from './ParticleSystemDebug';
 import { ColorCurve, ColorRange, Curve, curve, Range, range } from './Range';
 import vertexShader from './shaders/particle.vert.glsl';
 import fragmentShader from './shaders/particle.frag.glsl';
+import { OpacityComponent } from './components/OpacityComponent';
 
 export type RenderMode =
   | { type: 'billboard' }
@@ -53,7 +54,7 @@ export interface ParticleSystemConfig {
     lifetime: Range;
     color?: THREE.Color | ColorRange | ColorCurve;
     size: Range;
-    opacity: Range | Curve;
+    opacity?: number | Range | Curve;
     speedScale: Range;
     textureRotation?: Range;  // Скорость вращения текстуры в радианах/сек
     geometryRotation?: Range; // Скорость вращения геометрии в радианах/сек
@@ -79,15 +80,13 @@ export default class ParticleSystem extends THREE.Object3D {
   private particles!: THREE.InstancedMesh;
   private positions!: Float32Array;
   private scales!: Float32Array;
-  private opacities!: Float32Array;
   private ages!: Float32Array;
-  private activeParticles!: number;
+  public activeParticles!: number;
   private initialPositions!: Float32Array;
   private speedMultipliers!: Float32Array;
   private velocities!: Float32Array;
   private debug?: ParticleSystemDebug;
   private components: ParticleComponent[] = [];
-  private lastUpdateTime: number = 0;
 
   constructor(config: Partial<ParticleSystemConfig> = {}) {
     super();
@@ -123,6 +122,11 @@ export default class ParticleSystem extends THREE.Object3D {
     // Добавляем компонент цвета
     if (this.config.particle.color) {
       this.addComponent(new ColorComponent(this, this.config.particle.color));
+    }
+
+    // Добавляем компонент прозрачности
+    if (this.config.particle.opacity) {
+      this.addComponent(new OpacityComponent(this, this.config.particle.opacity));
     }
 
     this.setupParticleSystem();
@@ -179,7 +183,6 @@ export default class ParticleSystem extends THREE.Object3D {
 
     this.positions = new Float32Array(this.config.maxParticles * 3);
     this.scales = new Float32Array(this.config.maxParticles);
-    this.opacities = new Float32Array(this.config.maxParticles);
     this.ages = new Float32Array(this.config.maxParticles);
     this.initialPositions = new Float32Array(this.config.maxParticles * 3);
     this.speedMultipliers = new Float32Array(this.config.maxParticles);
@@ -189,8 +192,6 @@ export default class ParticleSystem extends THREE.Object3D {
       new THREE.InstancedBufferAttribute(this.positions, 3));
     instancedGeometry.setAttribute('instanceScale',
       new THREE.InstancedBufferAttribute(this.scales, 1));
-    instancedGeometry.setAttribute('instanceOpacity',
-      new THREE.InstancedBufferAttribute(this.opacities, 1));
     instancedGeometry.setAttribute('instanceVelocity',
       new THREE.InstancedBufferAttribute(this.velocities, 3));
 
@@ -366,7 +367,6 @@ export default class ParticleSystem extends THREE.Object3D {
       this.velocities[index * 3 + 2] = direction.z * this.speedMultipliers[index];
 
       this.scales[index] = this.config.particle.size.lerp(0);
-      this.opacities[index] = this.config.particle.opacity.lerp(0);
       this.ages[index] = 0;
     }
 
@@ -374,7 +374,6 @@ export default class ParticleSystem extends THREE.Object3D {
 
     this.particles.geometry.attributes.instancePosition.needsUpdate = true;
     this.particles.geometry.attributes.instanceScale.needsUpdate = true;
-    this.particles.geometry.attributes.instanceOpacity.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
@@ -407,7 +406,6 @@ export default class ParticleSystem extends THREE.Object3D {
           this.initialPositions[currentIndex * 3 + 2] = this.initialPositions[i * 3 + 2];
 
           this.scales[currentIndex] = this.scales[i];
-          this.opacities[currentIndex] = this.opacities[i];
           this.ages[currentIndex] = this.ages[i];
           this.speedMultipliers[currentIndex] = this.speedMultipliers[i];
 
@@ -439,7 +437,6 @@ export default class ParticleSystem extends THREE.Object3D {
         }
 
         this.scales[currentIndex] = this.config.particle.size.lerp(lifePercent);
-        this.opacities[currentIndex] = this.config.particle.opacity.lerp(lifePercent);
 
         currentIndex++;
       }
@@ -456,7 +453,6 @@ export default class ParticleSystem extends THREE.Object3D {
 
     this.particles.geometry.attributes.instancePosition.needsUpdate = true;
     this.particles.geometry.attributes.instanceScale.needsUpdate = true;
-    this.particles.geometry.attributes.instanceOpacity.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
@@ -468,31 +464,5 @@ export default class ParticleSystem extends THREE.Object3D {
   addComponent(component: ParticleComponent): void {
     this.components.push(component);
     component.initialize();
-  }
-
-  update(currentTime: number): void {
-    if (this.lastUpdateTime === 0) {
-      this.lastUpdateTime = currentTime;
-      return;
-    }
-    const deltaTime = (currentTime - this.lastUpdateTime) / 1000;
-    this.lastUpdateTime = currentTime;
-
-    // Эмиттируем частицы каждый кадр
-    if (Math.random() < 0.1) {
-      this.emit(1000);
-    }
-
-    if (this.config.debug && this.debug) {
-      const startTime = performance.now();
-      this.updateParticles(deltaTime);
-      const updateTime = performance.now() - startTime;
-
-      this.debug.updateExecutionTime(updateTime);
-      this.debug.updateParticleCount(this.activeParticles, this.config.maxParticles);
-      this.debug.updatePixelCount(this.config.particle.size, this.activeParticles);
-    } else {
-      this.updateParticles(deltaTime);
-    }
   }
 }
