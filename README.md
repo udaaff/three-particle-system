@@ -2,12 +2,6 @@
 
 A powerful and flexible particle system for Three.js with component-based architecture.
 
-## Requirements
-
-- Three.js r150 or higher
-- TypeScript 4.x
-- Modern browser with WebGL 2.0 support
-
 ## Features
 
 - 🎨 Customizable particle properties:
@@ -36,108 +30,18 @@ A powerful and flexible particle system for Three.js with component-based archit
   - Velocity Aligned
   - Oriented (custom orientation)
 
-## Usage
+## Performance
 
-```typescript
-import * as THREE from 'three';
-import ParticleSystem from './ParticleSystem';
-import { range, curve } from './Range';
-
-// Setup Three.js scene
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-camera.position.z = 100;
-
-async function createParticleSystem() {
-  // Create particle texture
-  const texture = await new THREE.TextureLoader().loadAsync('particle.png');
-
-  // Configure particle system
-  const system = new ParticleSystem({
-    texture,
-    maxParticles: 100000,
-    renderMode: { type: 'billboard' },
-
-    // Emitter configuration
-    emitter: {
-      type: 'box',
-      size: { x: 100, y: 1, z: 100 },
-      direction: {
-        vector: new THREE.Vector3(0, 1, 0),
-        spread: Math.PI / 4
-      }
-    },
-
-    // Particle configuration
-    particle: {
-      lifetime: range(2, 4),
-      speedScale: range(1, 2),
-      size: range(0.2, 0.1),
-      opacity: curve([
-        [0, 0],
-        [0.2, 1],
-        [0.8, 1],
-        [1, 0]
-      ])
-    },
-
-    // Physics configuration
-    physics: {
-      gravity: new THREE.Vector3(0, 0.8, 0),
-      friction: 0.1,
-      turbulence: {
-        strength: 0.2,
-        scale: 1,
-        speed: 0.5
-      }
-    }
-  });
-
-  // Add to scene
-  scene.add(system);
-
-  return system;
-}
-
-// Initialize the system
-let particleSystem: ParticleSystem;
-createParticleSystem().then(system => {
-  particleSystem = system;
-});
-
-// Animation loop setup
-let lastTime = 0;
-function animate(currentTime: number) {
-  const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
-  lastTime = currentTime;
-
-  if (particleSystem) {
-    particleSystem.emit(1000); // create 1000 particles per frame
-    particleSystem.updateParticles(deltaTime);
-  }
-
-  renderer.render(scene, camera);
-  requestAnimationFrame(animate);
-}
-
-// Start animation loop
-requestAnimationFrame(animate);
-
-// Handle window resize
-window.addEventListener('resize', () => {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(width, height);
-});
-```
+- Uses a single geometry with instanced attributes for efficient particle rendering
+- Data compaction for memory optimization
+- Attributes are updated only when necessary
+- Components are modular and affect performance only when used:
+  - Each active component adds its own update overhead
+  - Unused components have zero performance impact
+  - Most expensive components are Turbulence and Path following
+- Memory allocation considerations:
+  - Set `maxParticles` according to actual needs as it pre-allocates memory for all attributes
+  - Higher `maxParticles` values increase GPU memory usage even if fewer particles are active
 
 ## Component Architecture
 
@@ -177,15 +81,63 @@ Displays information about:
 
 The debug overlay can be helpful during development and performance optimization.
 
-## Performance
+## Usage
 
-- Uses a single geometry with instanced attributes for efficient particle rendering
-- Data compaction for memory optimization
-- Attributes are updated only when necessary
-- Components are modular and affect performance only when used:
-  - Each active component adds its own update overhead
-  - Unused components have zero performance impact
-  - Most expensive components are Turbulence and Path following
+```typescript
+const system = new ParticleSystem({
+  // Basic setup
+  texture,                    // Texture used for particles
+  maxParticles: 100000,      // Maximum number of particles that can exist at once
+  renderMode: {
+    type: 'billboard'        // Particles always face camera
+    // Other options: 'velocity_aligned', 'oriented'
+  },
+
+  // Emitter defines where and how particles spawn
+  emitter: {
+    type: 'box',             // Particles spawn in box shape
+    size: { x: 100, y: 1, z: 100 },  // Box dimensions
+    direction: {
+      vector: new THREE.Vector3(0, 1, 0),  // Emit upwards
+      spread: Math.PI / 4    // 45-degree spread angle
+    }
+    // Other types: 'point', 'sphere'
+  },
+
+  // Particle properties and behavior
+  particle: {
+    lifetime: range(2, 4),   // Each particle lives between 2-4 seconds
+    speedScale: range(1, 2), // Initial velocity multiplier
+    size: range(0.2, 0.1),  // Particle size range
+    opacity: curve([         // Opacity over lifetime
+      [0, 0],               // Start transparent
+      [0.2, 1],             // Fade in
+      [0.8, 1],             // Stay opaque
+      [1, 0]                // Fade out at end
+    ]),
+    // Optional: color, textureRotation, geometryRotation
+  },
+
+  // Optional physics simulation
+  physics: {
+    gravity: new THREE.Vector3(0, 0.8, 0),  // Upward force
+    friction: 0.1,                          // Slow down over time
+    turbulence: {                           // Add random motion
+      strength: 0.2,                        // How much it affects particles
+      scale: 1,                             // Size of turbulence pattern
+      speed: 0.5                            // How fast pattern changes
+    }
+  }
+});
+
+function animate(deltaTime: number) {
+  // Create new particles each frame
+  system.emit(1000);  // Emit 1000 particles
+
+  // Update particle simulation
+  system.updateParticles(deltaTime);
+}
+```
 
 ## License
 
