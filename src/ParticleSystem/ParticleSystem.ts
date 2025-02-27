@@ -14,7 +14,6 @@ import vertexShader from './shaders/particle.vert.glsl';
 import fragmentShader from './shaders/particle.frag.glsl';
 import { OpacityComponent } from './components/OpacityComponent';
 import { SizeComponent } from './components/SizeComponent';
-import { ParticleSystemDebug } from './ParticleSystemDebug';
 
 export type RenderMode =
   | { type: 'billboard' }
@@ -77,7 +76,7 @@ export interface ParticleSystemConfig {
 
 export default class ParticleSystem extends THREE.Object3D {
   public config: ParticleSystemConfig;
-  private particles!: THREE.InstancedMesh;
+  private particles!: THREE.Mesh;
   private positions!: Float32Array;
   private scales!: Float32Array;
   private ages!: Float32Array;
@@ -141,13 +140,6 @@ export default class ParticleSystem extends THREE.Object3D {
         textureRotation: range(-0.04, 0.04),
         geometryRotation: range(-0.04, 0.04),
       },
-      // physics: {
-      //   friction: 0.01,
-      //   vortex: {
-      //     strength: 0.1,
-      //     center: new THREE.Vector3(0, 0.5, 0)
-      //   }
-      // },
       ...config
     };
   }
@@ -184,12 +176,10 @@ export default class ParticleSystem extends THREE.Object3D {
 
     const material = this.createShaderMaterial(this.config.texture);
 
-    this.particles = new THREE.InstancedMesh(
+    this.particles = new THREE.Mesh(
       instancedGeometry,
       material,
-      this.config.maxParticles
     );
-    this.particles.frustumCulled = false;
     this.add(this.particles);
 
     this.activeParticles = 0;
@@ -430,7 +420,6 @@ export default class ParticleSystem extends THREE.Object3D {
     }
 
     this.activeParticles = currentIndex;
-    this.particles.count = currentIndex;
 
     this.particles.geometry.attributes.instancePosition.needsUpdate = true;
     this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;

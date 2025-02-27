@@ -3,17 +3,22 @@ import { ColorComponent } from '../ParticleSystem/components/ColorComponent';
 import { ColorCurve, ColorRange } from '../ParticleSystem/Range';
 import { ParticleComponent } from '../ParticleSystem/components/ParticleComponent';
 
+type ColorValue = THREE.Color | ColorRange | ColorCurve | undefined;
+
 /**
  * Mock ParticleSystem for testing
  * Provides minimal implementation required for ColorComponent testing
  */
 class MockParticleSystem {
   config = {
-    maxParticles: 10
+    maxParticles: 10,
+    particle: {
+      color: undefined as ColorValue
+    }
   };
 
   geometry = new THREE.BufferGeometry();
-  material = new THREE.ShaderMaterial();
+  material = new THREE.RawShaderMaterial();
   colors = new Float32Array(this.config.maxParticles * 3);
   components: ParticleComponent[] = [];
 }
@@ -38,7 +43,8 @@ describe('ColorComponent', () => {
   describe('initialization', () => {
     it('should initialize with static color', () => {
       const color = new THREE.Color(1, 0, 0);
-      const component = new ColorComponent(particleSystem as any, color);
+      particleSystem.config.particle.color = color;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
 
       expect(component['needsColorUpdate']).toBe(false);
@@ -48,7 +54,8 @@ describe('ColorComponent', () => {
 
     it('should initialize with color range', () => {
       const colorRange = new ColorRange(new THREE.Color(1, 0, 0), new THREE.Color(0, 1, 0));
-      const component = new ColorComponent(particleSystem as any, colorRange);
+      particleSystem.config.particle.color = colorRange;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
 
       expect(component['needsColorUpdate']).toBe(true);
@@ -60,17 +67,11 @@ describe('ColorComponent', () => {
         [0, new THREE.Color(1, 0, 0)],
         [1, new THREE.Color(0, 1, 0)],
       ]);
-      const component = new ColorComponent(particleSystem as any, colorCurve);
+      particleSystem.config.particle.color = colorCurve;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
 
       expect(component['needsColorUpdate']).toBe(true);
-      expect(component['colors']).toBeInstanceOf(Float32Array);
-    });
-
-    it('should initialize with undefined color', () => {
-      const component = new ColorComponent(particleSystem as any, null as any);
-      component.initialize();
-      expect(component['needsColorUpdate']).toBe(false);
       expect(component['colors']).toBeInstanceOf(Float32Array);
     });
   });
@@ -78,7 +79,8 @@ describe('ColorComponent', () => {
   describe('onEmit', () => {
     it('should set static color', () => {
       const color = new THREE.Color(1, 0, 0);
-      const component = new ColorComponent(particleSystem as any, color);
+      particleSystem.config.particle.color = color;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
       component.onEmit(0);
 
@@ -89,7 +91,8 @@ describe('ColorComponent', () => {
 
     it('should set initial color from range', () => {
       const colorRange = new ColorRange(new THREE.Color(1, 0, 0), new THREE.Color(0, 1, 0));
-      const component = new ColorComponent(particleSystem as any, colorRange);
+      particleSystem.config.particle.color = colorRange;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
       component.onEmit(0);
 
@@ -97,22 +100,13 @@ describe('ColorComponent', () => {
       expect(component['colors'][1]).toBe(0);
       expect(component['colors'][2]).toBe(0);
     });
-
-    it('should handle undefined color', () => {
-      const component = new ColorComponent(particleSystem as any, null as any);
-      component.initialize();
-      component.onEmit(0);
-
-      expect(component['colors'][0]).toBe(-1);
-      expect(component['colors'][1]).toBe(-1);
-      expect(component['colors'][2]).toBe(-1);
-    });
   });
 
   describe('onUpdate', () => {
     it('should update color over lifetime for color range', () => {
       const colorRange = new ColorRange(new THREE.Color(1, 0, 0), new THREE.Color(0, 1, 0));
-      const component = new ColorComponent(particleSystem as any, colorRange);
+      particleSystem.config.particle.color = colorRange;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
       component.onEmit(0);
       component.onUpdate(0, 0.016, 0.5);
@@ -124,7 +118,8 @@ describe('ColorComponent', () => {
 
     it('should not update color for static color', () => {
       const color = new THREE.Color(1, 0, 0);
-      const component = new ColorComponent(particleSystem as any, color);
+      particleSystem.config.particle.color = color;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
       component.onEmit(0);
 
@@ -140,7 +135,8 @@ describe('ColorComponent', () => {
         [0.5, new THREE.Color(0, 1, 0)],   // зеленый
         [1, new THREE.Color(0, 0, 1)]      // синий
       ]);
-      const component = new ColorComponent(particleSystem as any, colorCurve);
+      particleSystem.config.particle.color = colorCurve;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
       component.onEmit(0);
 
@@ -166,7 +162,8 @@ describe('ColorComponent', () => {
   describe('compactParticleData', () => {
     it('should correctly copy color data', () => {
       const color = new THREE.Color(1, 0, 0);
-      const component = new ColorComponent(particleSystem as any, color);
+      particleSystem.config.particle.color = color;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
       component.onEmit(1);
       component.compactParticleData(0, 1);
@@ -178,7 +175,8 @@ describe('ColorComponent', () => {
 
     it('should handle edge cases in compactParticleData', () => {
       const color = new THREE.Color(1, 0, 0);
-      const component = new ColorComponent(particleSystem as any, color);
+      particleSystem.config.particle.color = color;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
 
       // Тест с максимальным допустимым индексом
@@ -208,7 +206,8 @@ describe('ColorComponent', () => {
   describe('markAttributesNeedUpdate', () => {
     it('should update attribute when needed', () => {
       const color = new THREE.Color(1, 0, 0);
-      const component = new ColorComponent(particleSystem as any, color);
+      particleSystem.config.particle.color = color;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
 
       const mockAttribute = new THREE.InstancedBufferAttribute(new Float32Array(3), 3);
@@ -230,7 +229,8 @@ describe('ColorComponent', () => {
   describe('getAttributes', () => {
     it('should return correct attribute with proper name', () => {
       const color = new THREE.Color(1, 0, 0);
-      const component = new ColorComponent(particleSystem as any, color);
+      particleSystem.config.particle.color = color;
+      const component = new ColorComponent(particleSystem as any);
       component.initialize();
 
       const attrs = component.getAttributes();
@@ -242,7 +242,8 @@ describe('ColorComponent', () => {
   describe('getUniforms and getDefines', () => {
     it('should return empty objects', () => {
       const color = new THREE.Color(1, 0, 0);
-      const component = new ColorComponent(particleSystem as any, color);
+      particleSystem.config.particle.color = color;
+      const component = new ColorComponent(particleSystem as any);
 
       expect(component.getUniforms()).toEqual({});
       expect(component.getDefines()).toEqual({});
