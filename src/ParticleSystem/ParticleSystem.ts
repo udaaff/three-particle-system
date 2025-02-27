@@ -31,16 +31,19 @@ export type EmitterType =
       type: 'point';
       position: THREE.Vector3;
       direction?: Direction;
+      space?: 'local' | 'world';
     }
   | {
       type: 'box';
       size: { x: number; y: number; z: number };
       direction?: Direction;
+      space?: 'local' | 'world';
     }
   | {
       type: 'sphere';
       radius: number;
       direction?: Direction;
+      space?: 'local' | 'world';
     };
 
 export interface ParticleSystemConfig {
@@ -181,7 +184,6 @@ export default class ParticleSystem extends THREE.Object3D {
       material,
     );
     this.add(this.particles);
-
     this.activeParticles = 0;
   }
 
@@ -202,6 +204,11 @@ export default class ParticleSystem extends THREE.Object3D {
           defines.USE_UP = true;
         }
         break;
+    }
+
+    // Добавляем define для мировых координат
+    if (this.config.emitter.space === 'world') {
+      defines.USE_WORLD_SPACE = true;
     }
 
     // Добавляем defines от компонентов
@@ -297,6 +304,17 @@ export default class ParticleSystem extends THREE.Object3D {
     } else {
       // Если направление не задано, используем случайное
       direction.randomDirection();
+    }
+
+    // Преобразуем координаты если нужно
+    if (emitter.space === 'world') {
+      // Преобразуем позицию в мировые координаты
+      position.applyMatrix4(this.matrixWorld);
+
+      // Преобразуем направление в мировое пространство без учета позиции
+      const worldDirection = direction.clone();
+      worldDirection.transformDirection(this.matrixWorld);
+      direction.copy(worldDirection);
     }
 
     return { position, direction };

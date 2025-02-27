@@ -22,6 +22,7 @@ A powerful and flexible particle system for Three.js with component-based archit
   - Point
   - Box
   - Sphere
+  - World/Local space emission for each type
 
 - 🛣️ Path following
 
@@ -99,9 +100,11 @@ const system = new ParticleSystem({
     size: { x: 100, y: 1, z: 100 },  // Box dimensions
     direction: {
       vector: new THREE.Vector3(0, 1, 0),  // Emit upwards
-      spread: Math.PI / 4    // 45-degree spread angle
-    }
-    // Other types: 'point', 'sphere'
+      spread: Math.PI / 4,   // 45-degree spread angle
+      randomness: 0.2        // Add some randomness to direction
+    },
+    space: 'world'           // Emit in world coordinates
+    // space: 'local'        // Or emit relative to emitter (default)
   },
 
   // Particle properties and behavior

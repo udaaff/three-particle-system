@@ -45,24 +45,25 @@ async function main() {
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture,
-    maxParticles: 1000000,
+    maxParticles: 1000,
     renderMode: { type: 'billboard' },
 
     // Emitter configuration
     emitter: {
-      type: 'box',
-      size: { x: 100, y: 1, z: 100 },
+      type: 'point',
+      position: new THREE.Vector3(0, 0, 0),
       direction: {
         vector: new THREE.Vector3(0, 1, 0),
         spread: Math.PI / 4
-      }
+      },
+      space: 'world'  // Используем мировые координаты
     },
 
     // Particle configuration
     particle: {
       lifetime: range(2, 4),
       speedScale: range(1, 2),
-      size: 0.1,
+      size: 0.5,
       // opacity: curve([
       //   [0, 0],
       //   [0.2, 1],
@@ -84,6 +85,19 @@ async function main() {
   });
 
   scene.add(particleSystem);
+
+  // Добавим анимацию движения эмиттера для теста
+  particleSystem.position.set(0, 0, 0);
+
+  // Функция для движения эмиттера по кругу
+  function updateEmitterPosition(time: number) {
+    const radius = 5;
+    const speed = 0.5;
+    particleSystem.position.x = Math.cos(time * speed) * radius;
+    particleSystem.position.z = Math.sin(time * speed) * radius;
+    particleSystem.updateMatrix();
+    particleSystem.updateMatrixWorld();
+  }
 
   window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -107,9 +121,8 @@ async function main() {
     const deltaTime = (time - lastUpdateTime) / 1000;
     lastUpdateTime = time;
 
-    particleSystem.emit(5000);
-    if (Math.random() < 0.1) {
-    }
+    updateEmitterPosition(time / 1000);  // Обновляем позицию эмиттера
+    particleSystem.emit(1);
 
     const startTime = performance.now();
     particleSystem.updateParticles(deltaTime);

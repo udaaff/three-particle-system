@@ -236,6 +236,13 @@ void main() {
 
   vertexPosition += finalPosition;
 
-  vec4 mvPosition = modelViewMatrix * vec4(vertexPosition, 1.0);
+  #ifdef USE_WORLD_SPACE
+    // Используем viewMatrix вместо modelViewMatrix для мировых координат
+    vec4 mvPosition = viewMatrix * vec4(vertexPosition, 1.0);
+  #else
+    // Используем modelViewMatrix для локальных координат
+    vec4 mvPosition = modelViewMatrix * vec4(vertexPosition, 1.0);
+  #endif
+
   gl_Position = projectionMatrix * mvPosition;
 }
