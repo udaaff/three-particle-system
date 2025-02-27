@@ -6,10 +6,6 @@ import { Group, PerspectiveCamera, Texture, Vector3, WebGLRenderer } from "three
 import { OrbitControls } from 'three/examples/jsm/Addons.js';
 import { ParticleSystemDebug } from './ParticleSystem/ParticleSystemDebug';
 
-document.addEventListener("DOMContentLoaded", async () => {
-  await main();
-});
-
 async function main() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
@@ -46,12 +42,10 @@ async function main() {
   const group = new Group();
   scene.add(group);
 
-  // Создаем дебаг до создания ParticleSystem
-
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture,
-    maxParticles: 100000,
+    maxParticles: 1000000,
     renderMode: { type: 'billboard' },
 
     // Emitter configuration
@@ -68,25 +62,25 @@ async function main() {
     particle: {
       lifetime: range(2, 4),
       speedScale: range(1, 2),
-      size: range(0.2, 0.1),
-      opacity: curve([
-        [0, 0],
-        [0.2, 1],
-        [0.8, 1],
-        [1, 0]
-      ])
+      size: 0.1,
+      // opacity: curve([
+      //   [0, 0],
+      //   [0.2, 1],
+      //   [0.8, 1],
+      //   [1, 0]
+      // ])
     },
 
     // Physics configuration
-    physics: {
-      gravity: new THREE.Vector3(0, 0.8, 0),
-      friction: 0.1,
-      turbulence: {
-        strength: 0.2,
-        scale: 1,
-        speed: 0.5
-      }
-    }
+    // physics: {
+    //   gravity: new THREE.Vector3(0, 0.8, 0),
+    //   friction: 0.1,
+    //   turbulence: {
+    //     strength: 0.2,
+    //     scale: 1,
+    //     speed: 0.5
+    //   }
+    // }
   });
 
   scene.add(particleSystem);
@@ -113,7 +107,7 @@ async function main() {
     const deltaTime = (time - lastUpdateTime) / 1000;
     lastUpdateTime = time;
 
-    particleSystem.emit(200);
+    particleSystem.emit(5000);
     if (Math.random() < 0.1) {
     }
 
@@ -136,3 +130,5 @@ async function main() {
 
   animate(0);
 }
+
+main();
