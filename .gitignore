@@ -26,3 +26,4 @@ dist-ssr
 # Project specific
 public/assets
 .assetpack
+raw-assets/
