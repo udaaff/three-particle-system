@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { getAsset, initAssets, loadBundles } from "./assets/assets";
-import { range, curve } from "./ParticleSystem/Range";
+import { curve, range } from "./ParticleSystem/Range";
 import ParticleSystem from "./ParticleSystem/ParticleSystem";
 import { Group, PerspectiveCamera, Texture, Vector3, WebGLRenderer } from "three";
 import { OrbitControls } from 'three/examples/jsm/Addons.js';
@@ -50,47 +50,43 @@ async function main() {
 
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
-    texture: texture,
-    maxParticles: 1200000,
-    blending: THREE.AdditiveBlending,
-    renderMode: {
-      type: 'billboard',
-    },
+    texture,
+    maxParticles: 100000,
+    renderMode: { type: 'billboard' },
+
+    // Emitter configuration
     emitter: {
-      type: 'point',
-      position: new Vector3(0, 1, 0),
+      type: 'box',
+      size: { x: 100, y: 1, z: 100 },
       direction: {
-        vector: new Vector3(0, 1, 0),  // Направление вверх
-        spread: Math.PI / 2,           // Угол разброса 45 градусов
-        randomness: 0.3                // Небольшая случайность для естественности
+        vector: new THREE.Vector3(0, 1, 0),
+        spread: Math.PI / 4
       }
     },
+
+    // Particle configuration
     particle: {
-      lifetime: range(5, 10),
-      size: 0.02,
-      // color: curve([
-      //   [0, new THREE.Color(1, 0, 0)],     // Красный в начале
-      //   [0.5, new THREE.Color(0, 1, 0)],    // Желтый в середине
-      //   [1, new THREE.Color(0, 0, 1)]       // Белый в конце
-      // ]),
-      // opacity: curve([
-      //   [0, 0],
-      //   [0.2, 1],
-      //   [0.8, 1],
-      //   [1, 0]
-      // ]),
+      lifetime: range(2, 4),
       speedScale: range(1, 2),
-      // textureRotation: range(-Math.PI, Math.PI)
+      size: range(0.2, 0.1),
+      opacity: curve([
+        [0, 0],
+        [0.2, 1],
+        [0.8, 1],
+        [1, 0]
+      ])
     },
-    // physics: {
-    //   gravity: new Vector3(0, -0.6, 0),
-    //   friction: 0.5,
-    //   turbulence: {
-    //     strength: 0.4,
-    //     scale: 0.2,
-    //     speed: 0.2
-    //   }
-    // }
+
+    // Physics configuration
+    physics: {
+      gravity: new THREE.Vector3(0, 0.8, 0),
+      friction: 0.1,
+      turbulence: {
+        strength: 0.2,
+        scale: 1,
+        speed: 0.5
+      }
+    }
   });
 
   scene.add(particleSystem);
@@ -117,7 +113,7 @@ async function main() {
     const deltaTime = (time - lastUpdateTime) / 1000;
     lastUpdateTime = time;
 
-    particleSystem.emit(2000);
+    particleSystem.emit(200);
     if (Math.random() < 0.1) {
     }
 
