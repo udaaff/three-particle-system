@@ -95,8 +95,6 @@ async function main() {
     const speed = 0.5;
     particleSystem.position.x = Math.cos(time * speed) * radius;
     particleSystem.position.z = Math.sin(time * speed) * radius;
-    particleSystem.updateMatrix();
-    particleSystem.updateMatrixWorld();
   }
 
   window.addEventListener('resize', () => {
