@@ -12,7 +12,7 @@ export class ColorComponent extends ParticleComponent {
   private needsUpdate: boolean = false;
   private color: ColorValue;
 
-  static override getConfigValue(config: ParticleSystemConfig): ColorValue | undefined {
+  static getConfigValue(config: ParticleSystemConfig): THREE.Color | ColorRange | ColorCurve | undefined {
     return config.particle.color;
   }
 
@@ -30,28 +30,15 @@ export class ColorComponent extends ParticleComponent {
   }
 
   onEmit(index: number): void {
-    if (!this.color) {
-      // Используем цвет текстуры
-      this.colors[index * 3] = -1;
-      this.colors[index * 3 + 1] = -1;
-      this.colors[index * 3 + 2] = -1;
-    } else if (this.color instanceof THREE.Color) {
-      // Один цвет
+    if (this.color instanceof THREE.Color) {
       this.colors[index * 3] = this.color.r;
       this.colors[index * 3 + 1] = this.color.g;
       this.colors[index * 3 + 2] = this.color.b;
-    } else if (this.color instanceof ColorCurve) {
-      // Кривая цвета
+    } else {
       const color = this.color.lerp(0);
       this.colors[index * 3] = color.r;
       this.colors[index * 3 + 1] = color.g;
       this.colors[index * 3 + 2] = color.b;
-    } else {
-      // Range цвета
-      const { from } = this.color;
-      this.colors[index * 3] = from.r;
-      this.colors[index * 3 + 1] = from.g;
-      this.colors[index * 3 + 2] = from.b;
     }
     this.needsUpdate = true;
   }
