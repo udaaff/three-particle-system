@@ -40,7 +40,6 @@ A powerful and flexible particle system for Three.js with component-based archit
 - Components are modular and affect performance only when used:
   - Each active component adds its own update overhead
   - Unused components have zero performance impact
-  - Most expensive components are Turbulence and Path following
 - Memory allocation considerations:
   - Set `maxParticles` according to actual needs as it pre-allocates memory for all attributes
   - Higher `maxParticles` values increase GPU memory usage even if fewer particles are active

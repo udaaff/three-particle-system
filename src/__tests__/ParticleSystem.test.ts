@@ -191,10 +191,10 @@ describe('ParticleSystem', () => {
       // Должна остаться только одна частица
       expect(system.activeParticles).toBe(1);
 
-      // И это должна быть та, что была в индексе 1
-      expect(system['positions'][0]).toBeCloseTo(1, 5);
-      expect(system['positions'][1]).toBeCloseTo(2, 5);
-      expect(system['positions'][2]).toBeCloseTo(3, 5);
+      // После компактификации частица должна быть в индексе 0
+      expect(system['positions'][0]).toBe(1);
+      expect(system['positions'][1]).toBe(2);
+      expect(system['positions'][2]).toBe(3);
     });
   });
 });
