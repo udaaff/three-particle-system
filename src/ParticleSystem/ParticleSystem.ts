@@ -85,7 +85,6 @@ export default class ParticleSystem extends THREE.Object3D {
   private ages!: Float32Array;
   public activeParticles!: number;
   private initialPositions!: Float32Array;
-  private speedMultipliers!: Float32Array;
   private velocities!: Float32Array;
   private components: ParticleComponent[] = [];
 
@@ -164,7 +163,6 @@ export default class ParticleSystem extends THREE.Object3D {
     this.positions = new Float32Array(this.config.maxParticles * 3);
     this.ages = new Float32Array(this.config.maxParticles);
     this.initialPositions = new Float32Array(this.config.maxParticles * 3);
-    this.speedMultipliers = new Float32Array(this.config.maxParticles);
     this.velocities = new Float32Array(this.config.maxParticles * 3);
 
     this.geometry.setAttribute('instancePosition',
@@ -327,6 +325,7 @@ export default class ParticleSystem extends THREE.Object3D {
       }
 
       const { position, direction } = this.getEmissionData();
+      const speedScale = this.config.particle.speedScale.lerp(Math.random());
 
       const curIdx0 = index * 3;
       const curIdx1 = curIdx0 + 1;
@@ -342,13 +341,10 @@ export default class ParticleSystem extends THREE.Object3D {
       this.positions[curIdx1] = position.y;
       this.positions[curIdx2] = position.z;
 
-      // Сохраняем случайный множитель скорости
-      this.speedMultipliers[index] = this.config.particle.speedScale.lerp(Math.random());
-
       // Сохраняем направление как начальную скорость
-      this.velocities[curIdx0] = direction.x * this.speedMultipliers[index];
-      this.velocities[curIdx1] = direction.y * this.speedMultipliers[index];
-      this.velocities[curIdx2] = direction.z * this.speedMultipliers[index];
+      this.velocities[curIdx0] = direction.x * speedScale;
+      this.velocities[curIdx1] = direction.y * speedScale;
+      this.velocities[curIdx2] = direction.z * speedScale;
 
       this.ages[index] = 0;
     }
@@ -374,7 +370,7 @@ export default class ParticleSystem extends THREE.Object3D {
     for (let i = 0; i < this.activeParticles; i++) {
       this.ages[i] += deltaTime;
 
-      if (this.ages[i] < this.config.particle.lifetime.to) {
+      if (this.ages[i] < maxLifetime) {
         const dstIdx0 = aliveCount * 3;
         const dstIdx1 = dstIdx0 + 1;
         const dstIdx2 = dstIdx0 + 2;
@@ -397,7 +393,6 @@ export default class ParticleSystem extends THREE.Object3D {
           this.initialPositions[dstIdx2] = this.initialPositions[srcIdx2];
 
           this.ages[aliveCount] = this.ages[i];
-          this.speedMultipliers[aliveCount] = this.speedMultipliers[i];
 
           for (const component of this.components) {
             component.compactParticleData(aliveCount, i);
