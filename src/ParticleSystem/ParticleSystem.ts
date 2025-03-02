@@ -262,7 +262,7 @@ export default class ParticleSystem extends THREE.Object3D {
       case 'box': {
         this._position.set(
           (Math.random() - 0.5) * emitter.size.x,
-          (Math.random() - 0.5) * emitter.size.y + emitter.size.y / 2,
+          (Math.random() - 0.5) * emitter.size.y,
           (Math.random() - 0.5) * emitter.size.z
         );
         break;

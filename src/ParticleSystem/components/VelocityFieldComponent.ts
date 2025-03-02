@@ -14,6 +14,7 @@ export class VelocityFieldComponent extends ParticleComponent {
   private readonly _influence: number;
   private readonly _cachedTangents: THREE.Vector3[];
   private readonly _tangentResolution: number = 100; // Количество точек для кэширования
+  private readonly _temp = new THREE.Vector3();
 
   static override getConfigValue(config: ParticleSystemConfig): VelocityFieldConfig | undefined {
     return config.physics?.velocityField;
@@ -43,7 +44,7 @@ export class VelocityFieldComponent extends ParticleComponent {
       Math.floor(lifePercent * (this._tangentResolution - 1)),
       this._tangentResolution - 1
     );
-    return this._cachedTangents[index];
+    return this._temp.copy(this._cachedTangents[index]);
   }
 
   initialize(): void {
