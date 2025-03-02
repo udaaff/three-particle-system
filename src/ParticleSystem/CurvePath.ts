@@ -24,18 +24,16 @@ export function getTestPoints(): THREE.Vector3[] {
 
 export class CurvePath {
   private curve: THREE.CatmullRomCurve3;
-  private target: THREE.Vector3;
 
   constructor(points: THREE.Vector3[]) {
     this.curve = new THREE.CatmullRomCurve3(points);
-    this.target = new THREE.Vector3();
   }
 
-  getPoint(t: number): THREE.Vector3 {
-    return this.curve.getPoint(t, this.target);
+  getPoint(t: number, optionalTarget?: THREE.Vector3): THREE.Vector3 {
+    return this.curve.getPoint(t, optionalTarget);
   }
 
-  getTangent(t: number): THREE.Vector3 {
-    return this.curve.getTangent(t, this.target);
+  getTangent(t: number, optionalTarget?: THREE.Vector3): THREE.Vector3 {
+    return this.curve.getTangent(t, optionalTarget);
   }
 }

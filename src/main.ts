@@ -71,19 +71,19 @@ async function main() {
     particle: {
       lifetime: range(4, 8),
       speedScale: 6,
-      size: 0.1,
+      size: 0.02,
       color: curve([
         [0, new THREE.Color(0, 0, 1)],
         [0.5, new THREE.Color(0, 1, 0)],
         [1, new THREE.Color(1, 0, 0)]
       ]),
 
-      // opacity: curve([
-      //   [0, 0],
-      //   [0.2, 1],
-      //   [0.8, 1],
-      //   [1, 0]
-      // ])
+      opacity: curve([
+        [0, 0],
+        [0.2, 1],
+        [0.8, 1],
+        [1, 0]
+      ])
     },
 
     // Physics configuration
@@ -138,7 +138,7 @@ async function main() {
     lastUpdateTime = time;
 
     // updateEmitterPosition(time / 1000);  // Обновляем позицию эмиттера
-    particleSystem.emit(10);
+    particleSystem.emit(20);
 
     const startTime = performance.now();
     particleSystem.updateParticles(deltaTime);

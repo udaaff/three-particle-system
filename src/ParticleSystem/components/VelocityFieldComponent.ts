@@ -10,8 +10,11 @@ type VelocityFieldConfig = {
 
 export class VelocityFieldComponent extends ParticleComponent {
   private readonly _velocity = new THREE.Vector3();
-  private readonly path: CurvePath;
-  private readonly influence: number;
+  private readonly _path: CurvePath;
+  private readonly _influence: number;
+  private readonly _cachedTangents: THREE.Vector3[];
+  private readonly _tangentResolution: number = 100; // Количество точек для кэширования
+  private readonly _temp = new THREE.Vector3();
 
   static override getConfigValue(config: ParticleSystemConfig): VelocityFieldConfig | undefined {
     return config.physics?.velocityField;
@@ -19,11 +22,29 @@ export class VelocityFieldComponent extends ParticleComponent {
 
   constructor(system: ParticleSystem) {
     super(system);
-    const config = VelocityFieldComponent.getConfigValue(system.config);
-    if (!config) throw new Error('Velocity field config is required for VelocityFieldComponent');
+    const config = this.system.config.physics?.velocityField;
+    if (!config) throw new Error('VelocityField config is required');
 
-    this.path = config.path;
-    this.influence = config.influence ?? 0.3;
+    this._path = config.path;
+    this._influence = config.influence ?? 0.3;
+    this._cachedTangents = this._precalculateTangents();
+  }
+
+  private _precalculateTangents(): THREE.Vector3[] {
+    const tangents: THREE.Vector3[] = [];
+    for (let i = 0; i < this._tangentResolution; i++) {
+      const t = i / (this._tangentResolution - 1);
+      tangents.push(this._path.getTangent(t));
+    }
+    return tangents;
+  }
+
+  private _getTangentFromCache(lifePercent: number): THREE.Vector3 {
+    const index = Math.min(
+      Math.floor(lifePercent * (this._tangentResolution - 1)),
+      this._tangentResolution - 1
+    );
+    return this._temp.copy(this._cachedTangents[index]);
   }
 
   initialize(): void {
@@ -31,7 +52,7 @@ export class VelocityFieldComponent extends ParticleComponent {
   }
 
   onUpdate(index: number, _deltaTime: number, lifePercent: number): void {
-    const tangent = this.path.getTangent(lifePercent);
+    const tangent = this._getTangentFromCache(lifePercent);
     const velocities = (this.system as any).velocities;
 
     // Получаем текущую скорость частицы
@@ -42,7 +63,7 @@ export class VelocityFieldComponent extends ParticleComponent {
     );
 
     // Плавное приближение скорости к касательной (LERP)
-    this._velocity.lerp(tangent.multiplyScalar(this._velocity.length()), this.influence);
+    this._velocity.lerp(tangent.multiplyScalar(this._velocity.length()), this._influence);
 
     // Обновляем скорость частицы
     velocities[index * 3] = this._velocity.x;
