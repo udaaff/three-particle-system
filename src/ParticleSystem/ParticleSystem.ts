@@ -14,6 +14,7 @@ import vertexShader from './shaders/particle.vert.glsl';
 import fragmentShader from './shaders/particle.frag.glsl';
 import { OpacityComponent } from './components/OpacityComponent';
 import { SizeComponent } from './components/SizeComponent';
+import { VelocityFieldComponent } from './components/VelocityFieldComponent';
 
 export type RenderMode =
   | { type: 'billboard' }
@@ -69,12 +70,11 @@ export interface ParticleSystemConfig {
       scale: number;
       speed: number;
     };
-    vortex?: {
-      strength: number;
-      center: THREE.Vector3;
+    velocityField?: {
+      path: CurvePath;
+      influence?: number; // Сила влияния поля на скорость частиц (0-1), по умолчанию 0.3
     };
   };
-  path?: CurvePath;
 }
 
 export default class ParticleSystem extends THREE.Object3D {
@@ -84,7 +84,6 @@ export default class ParticleSystem extends THREE.Object3D {
   private positions!: Float32Array;
   private ages!: Float32Array;
   public activeParticles!: number;
-  private initialPositions!: Float32Array;
   private velocities!: Float32Array;
   private components: ParticleComponent[] = [];
 
@@ -96,7 +95,8 @@ export default class ParticleSystem extends THREE.Object3D {
     GeometryRotationComponent,
     ColorComponent,
     OpacityComponent,
-    SizeComponent
+    SizeComponent,
+    VelocityFieldComponent
   ] as const;
 
   private readonly _position = new THREE.Vector3();
@@ -169,7 +169,6 @@ export default class ParticleSystem extends THREE.Object3D {
 
     this.positions = new Float32Array(this.config.maxParticles * 3);
     this.ages = new Float32Array(this.config.maxParticles);
-    this.initialPositions = new Float32Array(this.config.maxParticles * 3);
     this.velocities = new Float32Array(this.config.maxParticles * 3);
 
     this.geometry.setAttribute('instancePosition',
@@ -338,11 +337,6 @@ export default class ParticleSystem extends THREE.Object3D {
       const curIdx1 = curIdx0 + 1;
       const curIdx2 = curIdx0 + 2;
 
-      // Сохраняем начальную позицию
-      this.initialPositions[curIdx0] = position.x;
-      this.initialPositions[curIdx1] = position.y;
-      this.initialPositions[curIdx2] = position.z;
-
       // Устанавливаем текущую позицию равной начальной
       this.positions[curIdx0] = position.x;
       this.positions[curIdx1] = position.y;
@@ -395,10 +389,6 @@ export default class ParticleSystem extends THREE.Object3D {
           this.velocities[dstIdx1] = this.velocities[srcIdx1];
           this.velocities[dstIdx2] = this.velocities[srcIdx2];
 
-          this.initialPositions[dstIdx0] = this.initialPositions[srcIdx0];
-          this.initialPositions[dstIdx1] = this.initialPositions[srcIdx1];
-          this.initialPositions[dstIdx2] = this.initialPositions[srcIdx2];
-
           this.ages[aliveCount] = this.ages[i];
 
           for (const component of this.components) {
@@ -413,16 +403,9 @@ export default class ParticleSystem extends THREE.Object3D {
           component.onUpdate(aliveCount, deltaTime, lifePercent);
         }
 
-        if (this.config.path) {
-          const point = this.config.path.getPoint(lifePercent);
-          this.positions[dstIdx0] = this.initialPositions[dstIdx0] + point.x;
-          this.positions[dstIdx1] = this.initialPositions[dstIdx1] + point.y;
-          this.positions[dstIdx2] = this.initialPositions[dstIdx2] + point.z;
-        } else {
-          this.positions[dstIdx0] += this.velocities[dstIdx0] * deltaTime;
-          this.positions[dstIdx1] += this.velocities[dstIdx1] * deltaTime;
-          this.positions[dstIdx2] += this.velocities[dstIdx2] * deltaTime;
-        }
+        this.positions[dstIdx0] += this.velocities[dstIdx0] * deltaTime;
+        this.positions[dstIdx1] += this.velocities[dstIdx1] * deltaTime;
+        this.positions[dstIdx2] += this.velocities[dstIdx2] * deltaTime;
 
         aliveCount++;
       }
@@ -449,7 +432,7 @@ export default class ParticleSystem extends THREE.Object3D {
     };
   }
 
-  addComponent(component: ParticleComponent): void {
+  private addComponent(component: ParticleComponent): void {
     this.components.push(component);
     component.initialize();
   }

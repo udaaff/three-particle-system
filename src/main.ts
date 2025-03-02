@@ -5,6 +5,7 @@ import ParticleSystem from "./ParticleSystem/ParticleSystem";
 import { Group, PerspectiveCamera, Texture, Vector3, WebGLRenderer } from "three";
 import { OrbitControls } from 'three/examples/jsm/Addons.js';
 import { ParticleSystemDebug } from './ParticleSystem/ParticleSystemDebug';
+import { CurvePath, getTestPoints } from './ParticleSystem/CurvePath';
 
 async function main() {
   const scene = new THREE.Scene();
@@ -42,6 +43,12 @@ async function main() {
   const group = new Group();
   scene.add(group);
 
+  const geometry = new THREE.BufferGeometry().setFromPoints(getTestPoints());
+  const material = new THREE.LineBasicMaterial({
+    color: 0xff0000
+  });
+  const curveObject = new THREE.Line(geometry, material);
+  group.add(curveObject);
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     // texture,
@@ -54,7 +61,7 @@ async function main() {
       type: 'point',
       position: new THREE.Vector3(0, 0, 0),
       direction: {
-        vector: new THREE.Vector3(0, 1, 0),
+        vector: new THREE.Vector3(0, 0, 0),
         spread: Math.PI / 4
       },
       space: 'world'  // Используем мировые координаты
@@ -62,9 +69,9 @@ async function main() {
 
     // Particle configuration
     particle: {
-      lifetime: range(2, 4),
-      speedScale: range(3, 4),
-      size: 0.02,
+      lifetime: range(4, 8),
+      speedScale: range(6, 6),
+      size: 0.1,
       color: curve([
         [0, new THREE.Color(0, 0, 1)],
         [0.5, new THREE.Color(0, 1, 0)],
@@ -81,13 +88,17 @@ async function main() {
 
     // Physics configuration
     physics: {
-      gravity: new THREE.Vector3(0, -0.8, 0),
+      velocityField: {
+        path: new CurvePath(getTestPoints()),
+        influence: 0.2
+      },
+      // gravity: new THREE.Vector3(0, -0.8, 0),
       // friction: 0.1,
-      turbulence: {
-        strength: 0.2,
-        scale: 1,
-        speed: 0.5
-      }
+      // turbulence: {
+      //   strength: 0.2,
+      //   scale: 1,
+      //   speed: 0.5
+      // }
     }
   });
 
@@ -127,7 +138,7 @@ async function main() {
     lastUpdateTime = time;
 
     // updateEmitterPosition(time / 1000);  // Обновляем позицию эмиттера
-    particleSystem.emit(100);
+    particleSystem.emit(10);
 
     const startTime = performance.now();
     particleSystem.updateParticles(deltaTime);

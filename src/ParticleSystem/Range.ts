@@ -15,10 +15,6 @@ export class Range implements IRange<number> {
   lerp(t: number) {
     return (this.to - this.from) * t + this.from;
   }
-
-  random() {
-    return this.lerp(Math.random());
-  }
 }
 
 export class ColorRange implements IRange<THREE.Color> {
