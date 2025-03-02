@@ -45,8 +45,9 @@ async function main() {
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture,
-    maxParticles: 20000,
+    maxParticles: 100000,
     renderMode: { type: 'billboard' },
+    blending: THREE.AdditiveBlending,
 
     // Emitter configuration
     emitter: {
@@ -62,13 +63,14 @@ async function main() {
     // Particle configuration
     particle: {
       lifetime: range(2, 4),
-      speedScale: range(1, 2),
-      size: 0.5,
+      speedScale: range(2, 3),
+      size: 0.02,
       color: curve([
         [0, new THREE.Color(1, 0, 0)],
         [0.5, new THREE.Color(0, 1, 0)],
         [1, new THREE.Color(0, 0, 1)]
       ]),
+
       // opacity: curve([
       //   [0, 0],
       //   [0.2, 1],
@@ -78,15 +80,15 @@ async function main() {
     },
 
     // Physics configuration
-    // physics: {
-    //   gravity: new THREE.Vector3(0, 0.8, 0),
-    //   friction: 0.1,
-    //   turbulence: {
-    //     strength: 0.2,
-    //     scale: 1,
-    //     speed: 0.5
-    //   }
-    // }
+    physics: {
+      gravity: new THREE.Vector3(0, -0.8, 0),
+      // friction: 0.1,
+      turbulence: {
+        strength: 0.2,
+        scale: 1,
+        speed: 0.5
+      }
+    }
   });
 
   scene.add(particleSystem);
@@ -124,8 +126,8 @@ async function main() {
     const deltaTime = (time - lastUpdateTime) / 1000;
     lastUpdateTime = time;
 
-    updateEmitterPosition(time / 1000);  // Обновляем позицию эмиттера
-    particleSystem.emit(25);
+    // updateEmitterPosition(time / 1000);  // Обновляем позицию эмиттера
+    particleSystem.emit(100);
 
     const startTime = performance.now();
     particleSystem.updateParticles(deltaTime);

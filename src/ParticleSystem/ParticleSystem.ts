@@ -100,6 +100,12 @@ export default class ParticleSystem extends THREE.Object3D {
     SizeComponent
   ] as const;
 
+  private readonly _position = new THREE.Vector3();
+  private readonly _direction = new THREE.Vector3();
+  private readonly _quaternion = new THREE.Quaternion();
+  private readonly _up = new THREE.Vector3(0, 0, 1);
+  private readonly _random = new THREE.Vector3();
+
   constructor(config: Partial<ParticleSystemConfig> = {}) {
     super();
     this.config = this.getDefaultConfig(config);
@@ -244,14 +250,12 @@ export default class ParticleSystem extends THREE.Object3D {
   }
 
   private getEmissionData(): { position: THREE.Vector3; direction: THREE.Vector3 } {
-    const position = new THREE.Vector3();
-    const direction = new THREE.Vector3();
     const emitter = this.config.emitter;
 
     // Получаем позицию в зависимости от типа эмиттера
     switch (emitter.type) {
       case 'box': {
-        position.set(
+        this._position.set(
           (Math.random() - 0.5) * emitter.size.x,
           (Math.random() - 0.5) * emitter.size.y + emitter.size.y / 2,
           (Math.random() - 0.5) * emitter.size.z
@@ -259,12 +263,12 @@ export default class ParticleSystem extends THREE.Object3D {
         break;
       }
       case 'sphere': {
-        direction.randomDirection();
-        position.copy(direction).multiplyScalar(emitter.radius);
+        this._direction.randomDirection();
+        this._position.copy(this._direction).multiplyScalar(emitter.radius);
         break;
       }
       case 'point': {
-        position.copy(emitter.position);
+        this._position.copy(emitter.position);
         break;
       }
     }
@@ -274,47 +278,39 @@ export default class ParticleSystem extends THREE.Object3D {
       const { vector, spread, randomness = 1 } = emitter.direction;
 
       // Создаем случайное направление в конусе
-      const phi = Math.random() * Math.PI * 2; // Угол вокруг оси
+      const phi = Math.random() * Math.PI * 2;
       const cosSpread = Math.cos(spread);
-      const cosTheta = cosSpread + (1 - cosSpread) * Math.random(); // Интерполяция между cos(spread) и 1
+      const cosTheta = cosSpread + (1 - cosSpread) * Math.random();
       const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
 
       // Создаем вектор в конусе
-      direction.set(
+      this._direction.set(
         sinTheta * Math.cos(phi),
         sinTheta * Math.sin(phi),
         cosTheta
       );
 
       // Поворачиваем конус в направлении вектора
-      const quaternion = new THREE.Quaternion();
-      const up = new THREE.Vector3(0, 0, 1);
-      quaternion.setFromUnitVectors(up, vector.normalize());
-      direction.applyQuaternion(quaternion);
+      this._quaternion.setFromUnitVectors(this._up, vector.normalize());
+      this._direction.applyQuaternion(this._quaternion);
 
       // Добавляем случайность
       if (randomness > 0) {
-        const random = new THREE.Vector3().randomDirection().multiplyScalar(randomness);
-        direction.lerp(random, Math.random() * 0.2);
-        direction.normalize();
+        this._random.randomDirection().multiplyScalar(randomness);
+        this._direction.lerp(this._random, Math.random() * 0.2);
+        this._direction.normalize();
       }
     } else {
-      // Если направление не задано, используем случайное
-      direction.randomDirection();
+      this._direction.randomDirection();
     }
 
     // Преобразуем координаты если нужно
     if (emitter.space === 'world') {
-      // Преобразуем позицию в мировые координаты
-      position.applyMatrix4(this.matrixWorld);
-
-      // Преобразуем направление в мировое пространство без учета позиции
-      const worldDirection = direction.clone();
-      worldDirection.transformDirection(this.matrixWorld);
-      direction.copy(worldDirection);
+      this._position.applyMatrix4(this.matrixWorld);
+      this._direction.transformDirection(this.matrixWorld);
     }
 
-    return { position, direction };
+    return { position: this._position, direction: this._direction };
   }
 
   emit(count: number): number {
@@ -372,69 +368,67 @@ export default class ParticleSystem extends THREE.Object3D {
   }
 
   updateParticles(deltaTime: number): void {
-    let currentIndex = 0;
+    let aliveCount = 0;
+    const maxLifetime = this.config.particle.lifetime.to;
 
     for (let i = 0; i < this.activeParticles; i++) {
       this.ages[i] += deltaTime;
 
-      const curIdx0 = currentIndex * 3;
-      const curIdx1 = curIdx0 + 1;
-      const curIdx2 = curIdx0 + 2;
-
       if (this.ages[i] < this.config.particle.lifetime.to) {
-        if (currentIndex !== i) {
-          const idx0 = i * 3;
-          const idx1 = idx0 + 1;
-          const idx2 = idx0 + 2;
+        const dstIdx0 = aliveCount * 3;
+        const dstIdx1 = dstIdx0 + 1;
+        const dstIdx2 = dstIdx0 + 2;
 
-          // Копируем все параметры частицы
-          this.positions[curIdx0] = this.positions[idx0];
-          this.positions[curIdx1] = this.positions[idx1];
-          this.positions[curIdx2] = this.positions[idx2];
+        if (aliveCount !== i) {
+          const srcIdx0 = i * 3;
+          const srcIdx1 = srcIdx0 + 1;
+          const srcIdx2 = srcIdx0 + 2;
 
-          this.velocities[curIdx0] = this.velocities[idx0];
-          this.velocities[curIdx1] = this.velocities[idx1];
-          this.velocities[curIdx2] = this.velocities[idx2];
+          this.positions[dstIdx0] = this.positions[srcIdx0];
+          this.positions[dstIdx1] = this.positions[srcIdx1];
+          this.positions[dstIdx2] = this.positions[srcIdx2];
 
-          this.initialPositions[curIdx0] = this.initialPositions[idx0];
-          this.initialPositions[curIdx1] = this.initialPositions[idx1];
-          this.initialPositions[curIdx2] = this.initialPositions[idx2];
+          this.velocities[dstIdx0] = this.velocities[srcIdx0];
+          this.velocities[dstIdx1] = this.velocities[srcIdx1];
+          this.velocities[dstIdx2] = this.velocities[srcIdx2];
 
-          this.ages[currentIndex] = this.ages[i];
-          this.speedMultipliers[currentIndex] = this.speedMultipliers[i];
+          this.initialPositions[dstIdx0] = this.initialPositions[srcIdx0];
+          this.initialPositions[dstIdx1] = this.initialPositions[srcIdx1];
+          this.initialPositions[dstIdx2] = this.initialPositions[srcIdx2];
 
-          // Копируем данные из компонентов
+          this.ages[aliveCount] = this.ages[i];
+          this.speedMultipliers[aliveCount] = this.speedMultipliers[i];
+
           for (const component of this.components) {
-            component.compactParticleData(currentIndex, i);
+            component.compactParticleData(aliveCount, i);
           }
         }
 
-        const lifePercent = this.ages[currentIndex] / this.config.particle.lifetime.to;
+        const lifePercent = this.ages[aliveCount] / maxLifetime;
 
         // Обновляем каждый компонент
         for (const component of this.components) {
-          component.onUpdate(currentIndex, deltaTime, lifePercent);
+          component.onUpdate(aliveCount, deltaTime, lifePercent);
         }
 
         if (this.config.path) {
           const point = this.config.path.getPoint(lifePercent);
-
-          this.positions[curIdx0] = this.initialPositions[curIdx0] + point.x;
-          this.positions[curIdx1] = this.initialPositions[curIdx1] + point.y;
-          this.positions[curIdx2] = this.initialPositions[curIdx2] + point.z;
+          this.positions[dstIdx0] = this.initialPositions[dstIdx0] + point.x;
+          this.positions[dstIdx1] = this.initialPositions[dstIdx1] + point.y;
+          this.positions[dstIdx2] = this.initialPositions[dstIdx2] + point.z;
         } else {
-          const speedMultiplier = this.speedMultipliers[currentIndex];
-          this.positions[curIdx0] += this.velocities[curIdx0] * speedMultiplier * deltaTime;
-          this.positions[curIdx1] += this.velocities[curIdx1] * speedMultiplier * deltaTime;
-          this.positions[curIdx2] += this.velocities[curIdx2] * speedMultiplier * deltaTime;
+          const speedMultiplier = this.speedMultipliers[aliveCount];
+          this.positions[dstIdx0] += this.velocities[dstIdx0] * speedMultiplier * deltaTime;
+          this.positions[dstIdx1] += this.velocities[dstIdx1] * speedMultiplier * deltaTime;
+          this.positions[dstIdx2] += this.velocities[dstIdx2] * speedMultiplier * deltaTime;
         }
 
-        currentIndex++;
+        aliveCount++;
       }
     }
 
-    this.activeParticles = currentIndex;
-    this.geometry.instanceCount = this.activeParticles;
+    this.activeParticles = aliveCount;
+    this.geometry.instanceCount = aliveCount;
 
     this.geometry.attributes.instancePosition.needsUpdate = true;
     this.geometry.attributes.instanceVelocity.needsUpdate = true;
