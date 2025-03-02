@@ -417,10 +417,9 @@ export default class ParticleSystem extends THREE.Object3D {
           this.positions[dstIdx1] = this.initialPositions[dstIdx1] + point.y;
           this.positions[dstIdx2] = this.initialPositions[dstIdx2] + point.z;
         } else {
-          const speedMultiplier = this.speedMultipliers[aliveCount];
-          this.positions[dstIdx0] += this.velocities[dstIdx0] * speedMultiplier * deltaTime;
-          this.positions[dstIdx1] += this.velocities[dstIdx1] * speedMultiplier * deltaTime;
-          this.positions[dstIdx2] += this.velocities[dstIdx2] * speedMultiplier * deltaTime;
+          this.positions[dstIdx0] += this.velocities[dstIdx0] * deltaTime;
+          this.positions[dstIdx1] += this.velocities[dstIdx1] * deltaTime;
+          this.positions[dstIdx2] += this.velocities[dstIdx2] * deltaTime;
         }
 
         aliveCount++;

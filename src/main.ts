@@ -63,7 +63,7 @@ async function main() {
     // Particle configuration
     particle: {
       lifetime: range(2, 4),
-      speedScale: range(2, 3),
+      speedScale: range(3, 4),
       size: 0.02,
       color: curve([
         [0, new THREE.Color(1, 0, 0)],
