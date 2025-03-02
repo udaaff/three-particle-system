@@ -45,7 +45,7 @@ async function main() {
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
     texture,
-    maxParticles: 1000,
+    maxParticles: 20000,
     renderMode: { type: 'billboard' },
 
     // Emitter configuration
@@ -64,6 +64,11 @@ async function main() {
       lifetime: range(2, 4),
       speedScale: range(1, 2),
       size: 0.5,
+      color: curve([
+        [0, new THREE.Color(1, 0, 0)],
+        [0.5, new THREE.Color(0, 1, 0)],
+        [1, new THREE.Color(0, 0, 1)]
+      ]),
       // opacity: curve([
       //   [0, 0],
       //   [0.2, 1],
@@ -120,7 +125,7 @@ async function main() {
     lastUpdateTime = time;
 
     updateEmitterPosition(time / 1000);  // Обновляем позицию эмиттера
-    particleSystem.emit(1);
+    particleSystem.emit(25);
 
     const startTime = performance.now();
     particleSystem.updateParticles(deltaTime);

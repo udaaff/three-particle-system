@@ -80,8 +80,8 @@ export interface ParticleSystemConfig {
 export default class ParticleSystem extends THREE.Object3D {
   public config: ParticleSystemConfig;
   private particles!: THREE.Mesh;
+  private geometry!: THREE.InstancedBufferGeometry;
   private positions!: Float32Array;
-  private scales!: Float32Array;
   private ages!: Float32Array;
   public activeParticles!: number;
   private initialPositions!: Float32Array;
@@ -149,38 +149,35 @@ export default class ParticleSystem extends THREE.Object3D {
 
   private setupParticleSystem(): void {
     const baseGeometry = new THREE.PlaneGeometry(1, 1);
-    const instancedGeometry = new THREE.InstancedBufferGeometry();
+    this.geometry = new THREE.InstancedBufferGeometry();
 
-    instancedGeometry.index = baseGeometry.index;
-    instancedGeometry.attributes.position = baseGeometry.attributes.position;
-    instancedGeometry.attributes.uv = baseGeometry.attributes.uv;
+    this.geometry.index = baseGeometry.index;
+    this.geometry.attributes.position = baseGeometry.attributes.position;
+    this.geometry.attributes.uv = baseGeometry.attributes.uv;
 
     this.positions = new Float32Array(this.config.maxParticles * 3);
-    this.scales = new Float32Array(this.config.maxParticles);
     this.ages = new Float32Array(this.config.maxParticles);
     this.initialPositions = new Float32Array(this.config.maxParticles * 3);
     this.speedMultipliers = new Float32Array(this.config.maxParticles);
     this.velocities = new Float32Array(this.config.maxParticles * 3);
 
-    instancedGeometry.setAttribute('instancePosition',
+    this.geometry.setAttribute('instancePosition',
       new THREE.InstancedBufferAttribute(this.positions, 3));
-    instancedGeometry.setAttribute('instanceScale',
-      new THREE.InstancedBufferAttribute(this.scales, 1));
-    instancedGeometry.setAttribute('instanceVelocity',
+    this.geometry.setAttribute('instanceVelocity',
       new THREE.InstancedBufferAttribute(this.velocities, 3));
 
     // Добавляем атрибуты от компонентов
     for (const component of this.components) {
       const attributes = component.getAttributes();
       for (const [name, attribute] of Object.entries(attributes)) {
-        instancedGeometry.setAttribute(name, attribute);
+        this.geometry.setAttribute(name, attribute);
       }
     }
 
     const material = this.createShaderMaterial(this.config.texture);
 
     this.particles = new THREE.Mesh(
-      instancedGeometry,
+      this.geometry,
       material,
     );
     this.add(this.particles);
@@ -344,7 +341,6 @@ export default class ParticleSystem extends THREE.Object3D {
       this.initialPositions[curIdx1] = position.y;
       this.initialPositions[curIdx2] = position.z;
 
-
       // Устанавливаем текущую позицию равной начальной
       this.positions[curIdx0] = position.x;
       this.positions[curIdx1] = position.y;
@@ -362,9 +358,10 @@ export default class ParticleSystem extends THREE.Object3D {
     }
 
     this.activeParticles = endIndex;
+    this.geometry.instanceCount = this.activeParticles;
 
-    this.particles.geometry.attributes.instancePosition.needsUpdate = true;
-    this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
+    this.geometry.attributes.instancePosition.needsUpdate = true;
+    this.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
     for (const component of this.components) {
@@ -427,7 +424,6 @@ export default class ParticleSystem extends THREE.Object3D {
           this.positions[curIdx2] = this.initialPositions[curIdx2] + point.z;
         } else {
           const speedMultiplier = this.speedMultipliers[currentIndex];
-          // Используем только направление и множитель скорости
           this.positions[curIdx0] += this.velocities[curIdx0] * speedMultiplier * deltaTime;
           this.positions[curIdx1] += this.velocities[curIdx1] * speedMultiplier * deltaTime;
           this.positions[curIdx2] += this.velocities[curIdx2] * speedMultiplier * deltaTime;
@@ -438,9 +434,10 @@ export default class ParticleSystem extends THREE.Object3D {
     }
 
     this.activeParticles = currentIndex;
+    this.geometry.instanceCount = this.activeParticles;
 
-    this.particles.geometry.attributes.instancePosition.needsUpdate = true;
-    this.particles.geometry.attributes.instanceVelocity.needsUpdate = true;
+    this.geometry.attributes.instancePosition.needsUpdate = true;
+    this.geometry.attributes.instanceVelocity.needsUpdate = true;
 
     // Помечаем атрибуты компонентов как требующие обновления
     for (const component of this.components) {
