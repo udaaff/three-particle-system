@@ -91,8 +91,10 @@ const system = new ParticleSystem({
   texture,                    // Texture used for particles
   maxParticles: 100000,      // Maximum number of particles that can exist at once
   renderMode: {
-    type: 'billboard'        // Particles always face camera
-    // Other options: 'velocity_aligned', 'oriented'
+    type: 'billboard',        // Particles always face camera
+    sortParticles: true,      // Incluse particles sorting
+    normal: new THREE.Vector3(0, 1, 0),
+    up: new THREE.Vector3(0, 0, 1)
   },
 
   // Emitter defines where and how particles spawn

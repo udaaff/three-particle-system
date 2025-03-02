@@ -53,7 +53,7 @@ async function main() {
   const particleSystem = new ParticleSystem({
     // texture,
     maxParticles: 100000,
-    renderMode: { type: 'billboard' },
+    renderMode: { type: 'billboard', sortParticles: true },
     // blending: THREE.AdditiveBlending,
 
     // Emitter configuration

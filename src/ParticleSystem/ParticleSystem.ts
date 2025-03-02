@@ -17,9 +17,9 @@ import { SizeComponent } from './components/SizeComponent';
 import { VelocityFieldComponent } from './components/VelocityFieldComponent';
 
 export type RenderMode =
-  | { type: 'billboard' }
-  | { type: 'velocity_aligned' }
-  | { type: 'oriented', normal: THREE.Vector3, up?: THREE.Vector3 };
+  | { type: 'billboard'; sortParticles?: boolean }
+  | { type: 'velocity_aligned'; sortParticles?: boolean }
+  | { type: 'oriented'; normal: THREE.Vector3; up?: THREE.Vector3; sortParticles?: boolean };
 
 export type Direction = {
   vector: THREE.Vector3;   // Базовое направление
@@ -246,8 +246,8 @@ export default class ParticleSystem extends THREE.Object3D {
       vertexShader,
       fragmentShader,
       transparent: true,
-      depthWrite: false,
-      depthTest: false,
+      depthWrite: this.config.renderMode?.sortParticles ?? false,
+      depthTest: this.config.renderMode?.sortParticles ?? false,
       side: THREE.DoubleSide,
       blending: this.config.blending ?? THREE.NormalBlending,
     });
