@@ -58,7 +58,7 @@ export interface ParticleSystemConfig {
     color?: THREE.Color | ColorRange | ColorCurve;
     size?: number | Range | Curve;
     opacity?: number | Range | Curve;
-    speedScale: Range;
+    speedScale: number | Range;
     textureRotation?: Range;  // Скорость вращения текстуры в радианах/сек
     geometryRotation?: Range; // Скорость вращения геометрии в радианах/сек
   };
@@ -151,7 +151,7 @@ export default class ParticleSystem extends THREE.Object3D {
           [1, 0]
         ]),
         size: range(8, 8),
-        speedScale: range(0, 0.2),
+        speedScale: 0.2,
         textureRotation: range(-0.04, 0.04),
         geometryRotation: range(-0.04, 0.04),
       },
@@ -331,7 +331,9 @@ export default class ParticleSystem extends THREE.Object3D {
       }
 
       const { position, direction } = this.getEmissionData();
-      const speedScale = this.config.particle.speedScale.lerp(Math.random());
+      const speedScale = typeof this.config.particle.speedScale === 'number'
+        ? this.config.particle.speedScale
+        : this.config.particle.speedScale.lerp(Math.random());
 
       const curIdx0 = index * 3;
       const curIdx1 = curIdx0 + 1;

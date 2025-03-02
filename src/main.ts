@@ -61,7 +61,7 @@ async function main() {
       type: 'point',
       position: new THREE.Vector3(0, 0, 0),
       direction: {
-        vector: new THREE.Vector3(0, 0, 0),
+        vector: new THREE.Vector3(0, 1, 0),
         spread: Math.PI / 4
       },
       space: 'world'  // Используем мировые координаты
@@ -70,7 +70,7 @@ async function main() {
     // Particle configuration
     particle: {
       lifetime: range(4, 8),
-      speedScale: range(6, 6),
+      speedScale: 6,
       size: 0.1,
       color: curve([
         [0, new THREE.Color(0, 0, 1)],

@@ -112,7 +112,7 @@ const system = new ParticleSystem({
   // Particle properties and behavior
   particle: {
     lifetime: range(2, 4),   // Each particle lives between 2-4 seconds
-    speedScale: range(1, 2), // Initial velocity multiplier
+    speedScale: 1.5,         // Initial velocity multiplier (or range(1, 2) for random values)
     size: range(0.2, 0.1),  // Particle size range
     opacity: curve([         // Opacity over lifetime
       [0, 0],               // Start transparent
