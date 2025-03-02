@@ -119,9 +119,16 @@ export default class ParticleSystem extends THREE.Object3D {
     this.setupParticleSystem();
   }
 
+  private static createWhiteTexture(): THREE.Texture {
+    const data = new Uint8Array([255, 255, 255, 255]); // RGBA (белый цвет)
+    const texture = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
   getDefaultConfig(config?: Partial<ParticleSystemConfig>): ParticleSystemConfig {
     return {
-      texture: new THREE.Texture(),
+      texture: ParticleSystem.createWhiteTexture(),
       maxParticles: 1000,
       renderMode: {
         type: 'billboard'

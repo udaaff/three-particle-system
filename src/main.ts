@@ -44,10 +44,10 @@ async function main() {
 
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
-    texture,
+    // texture,
     maxParticles: 100000,
     renderMode: { type: 'billboard' },
-    blending: THREE.AdditiveBlending,
+    // blending: THREE.AdditiveBlending,
 
     // Emitter configuration
     emitter: {
@@ -66,9 +66,9 @@ async function main() {
       speedScale: range(3, 4),
       size: 0.02,
       color: curve([
-        [0, new THREE.Color(1, 0, 0)],
+        [0, new THREE.Color(0, 0, 1)],
         [0.5, new THREE.Color(0, 1, 0)],
-        [1, new THREE.Color(0, 0, 1)]
+        [1, new THREE.Color(1, 0, 0)]
       ]),
 
       // opacity: curve([
