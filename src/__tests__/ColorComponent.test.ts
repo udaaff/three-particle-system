@@ -77,7 +77,7 @@ describe('ColorComponent', () => {
   });
 
   describe('onEmit', () => {
-    it('should set static color', () => {
+    it('should set static color for THREE.Color', () => {
       const color = new THREE.Color(1, 0, 0);
       particleSystem.config.particle.color = color;
       const component = new ColorComponent(particleSystem as any);
@@ -89,16 +89,31 @@ describe('ColorComponent', () => {
       expect(component['colors'][2]).toBe(0);
     });
 
-    it('should set initial color from range', () => {
+    it('should set initial color using lerp(0) for Range and Curve', () => {
+      // Проверяем Range
       const colorRange = new ColorRange(new THREE.Color(1, 0, 0), new THREE.Color(0, 1, 0));
       particleSystem.config.particle.color = colorRange;
-      const component = new ColorComponent(particleSystem as any);
-      component.initialize();
-      component.onEmit(0);
+      const rangeComponent = new ColorComponent(particleSystem as any);
+      rangeComponent.initialize();
+      rangeComponent.onEmit(0);
 
-      expect(component['colors'][0]).toBe(1);
-      expect(component['colors'][1]).toBe(0);
-      expect(component['colors'][2]).toBe(0);
+      expect(rangeComponent['colors'][0]).toBe(1);
+      expect(rangeComponent['colors'][1]).toBe(0);
+      expect(rangeComponent['colors'][2]).toBe(0);
+
+      // Проверяем Curve
+      const colorCurve = new ColorCurve([
+        [0, new THREE.Color(1, 0, 0)],
+        [1, new THREE.Color(0, 1, 0)]
+      ]);
+      particleSystem.config.particle.color = colorCurve;
+      const curveComponent = new ColorComponent(particleSystem as any);
+      curveComponent.initialize();
+      curveComponent.onEmit(0);
+
+      expect(curveComponent['colors'][0]).toBe(1);
+      expect(curveComponent['colors'][1]).toBe(0);
+      expect(curveComponent['colors'][2]).toBe(0);
     });
   });
 
