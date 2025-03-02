@@ -51,6 +51,7 @@ export interface ParticleSystemConfig {
   texture: THREE.Texture;
   maxParticles: number;
   blending?: Blending;
+  transparent?: boolean;
   renderMode: RenderMode;
   emitter: EmitterType;
   particle: {
@@ -245,7 +246,7 @@ export default class ParticleSystem extends THREE.Object3D {
       uniforms,
       vertexShader,
       fragmentShader,
-      transparent: true,
+      transparent: this.config.transparent ?? true,
       depthWrite: this.config.renderMode?.sortParticles ?? false,
       depthTest: this.config.renderMode?.sortParticles ?? false,
       side: THREE.DoubleSide,
@@ -369,8 +370,8 @@ export default class ParticleSystem extends THREE.Object3D {
   updateParticles(deltaTime: number): void {
     let aliveCount = 0;
     const maxLifetime = this.config.particle.lifetime.to;
-
-    for (let i = 0; i < this.activeParticles; i++) {
+    const length = this.activeParticles;
+    for (let i = 0; i < length; i++) {
       this.ages[i] += deltaTime;
 
       if (this.ages[i] < maxLifetime) {
