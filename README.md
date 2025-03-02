@@ -30,7 +30,15 @@ A powerful and flexible particle system for Three.js with component-based archit
 - 🎬 Render modes:
   - Billboard (always faces camera)
   - Velocity Aligned
-  - Oriented (custom orientation)
+  - Oriented (custom orientation):
+    ```typescript
+    renderMode: {
+      type: 'oriented',
+      normal: new THREE.Vector3(0, 1, 0), // Required: orientation vector
+      up: new THREE.Vector3(0, 0, 1),     // Optional: up vector
+      sortParticles: true                 // Optional: enable depth sorting
+    }
+    ```
 
 ## Performance
 
@@ -92,9 +100,7 @@ const system = new ParticleSystem({
   maxParticles: 100000,      // Maximum number of particles that can exist at once
   renderMode: {
     type: 'billboard',        // Particles always face camera
-    sortParticles: true,      // Incluse particles sorting
-    normal: new THREE.Vector3(0, 1, 0),
-    up: new THREE.Vector3(0, 0, 1)
+    sortParticles: true      // Enable depth-based particle sorting
   },
 
   // Emitter defines where and how particles spawn
