@@ -17,6 +17,7 @@ A powerful and flexible particle system for Three.js with component-based archit
   - Gravity
   - Friction
   - Turbulence
+  - Velocity Field (path following with adjustable influence)
 
 - 🎯 Various emitter types:
   - Point
@@ -56,6 +57,7 @@ The system is built on components, each responsible for a specific aspect of par
 - `GravityComponent` - gravity effect
 - `FrictionComponent` - friction effect
 - `TurbulenceComponent` - turbulence effect
+- `VelocityFieldComponent` - path following and velocity field influence
 
 Components are automatically added when corresponding parameters are specified in the configuration.
 
@@ -129,6 +131,10 @@ const system = new ParticleSystem({
       strength: 0.2,                        // How much it affects particles
       scale: 1,                             // Size of turbulence pattern
       speed: 0.5                            // How fast pattern changes
+    },
+    velocityField: {                        // Guide particles along a path
+      path: curvePath,                      // Path to follow
+      influence: 0.3                        // How strongly particles follow the path (0-1)
     }
   }
 });
