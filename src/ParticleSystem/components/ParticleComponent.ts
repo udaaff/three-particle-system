@@ -8,7 +8,7 @@ export abstract class ParticleComponent {
     this.system = system;
   }
 
-  static getConfigValue(config: ParticleSystemConfig): any | undefined {
+  static getConfigValue(_config: ParticleSystemConfig): any | undefined {
     return undefined;
   }
 
