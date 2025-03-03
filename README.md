@@ -35,8 +35,7 @@ A powerful and flexible particle system for Three.js with component-based archit
     renderMode: {
       type: 'oriented',
       normal: new THREE.Vector3(0, 1, 0), // Required: orientation vector
-      up: new THREE.Vector3(0, 0, 1),     // Optional: up vector
-      sortParticles: true                 // Optional: enable depth sorting
+      up: new THREE.Vector3(0, 0, 1)      // Optional: up vector
     }
     ```
 
@@ -99,8 +98,7 @@ const system = new ParticleSystem({
   texture,                    // Texture used for particles
   maxParticles: 100000,      // Maximum number of particles that can exist at once
   renderMode: {
-    type: 'billboard',        // Particles always face camera
-    sortParticles: true      // Enable depth-based particle sorting
+    type: 'billboard'         // Particles always face camera
   },
 
   // Emitter defines where and how particles spawn

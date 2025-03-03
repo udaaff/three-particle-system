@@ -54,7 +54,7 @@ async function main() {
     texture,
     maxParticles: 100000,
     renderMode: { type: 'billboard' },
-    // blending: THREE.AdditiveBlending,
+    blending: THREE.AdditiveBlending,
 
     // Emitter configuration
     emitter: {
