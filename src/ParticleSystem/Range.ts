@@ -75,12 +75,17 @@ export class Curve implements IRange<number> {
     if (t >= this.points[this.points.length - 1][0]) return this.points[this.points.length - 1][1];
 
     let i = 1;
-    while (i < this.points.length && t > this.points[i][0]) i++;
+    while (i < this.points.length && t >= this.points[i][0]) i++;
+    i--;
 
-    const x0 = this.points[i - 1][0];
-    const x1 = this.points[i][0];
-    const y0 = this.points[i - 1][1];
-    const y1 = this.points[i][1];
+    if (i + 1 < this.points.length && this.points[i][0] === this.points[i + 1][0]) {
+      return this.points[i + 1][1];
+    }
+
+    const x0 = this.points[i][0];
+    const x1 = this.points[i + 1][0];
+    const y0 = this.points[i][1];
+    const y1 = this.points[i + 1][1];
 
     const t_normalized = (t - x0) / (x1 - x0);
     return y0 + (y1 - y0) * t_normalized;

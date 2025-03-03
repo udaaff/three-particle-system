@@ -247,8 +247,8 @@ export default class ParticleSystem extends THREE.Object3D {
       vertexShader,
       fragmentShader,
       transparent: this.config.transparent ?? true,
-      depthWrite: this.config.renderMode?.sortParticles ?? false,
-      depthTest: this.config.renderMode?.sortParticles ?? false,
+      depthWrite: this.config.renderMode?.sortParticles ?? true,
+      depthTest: this.config.renderMode?.sortParticles ?? true,
       side: THREE.DoubleSide,
       blending: this.config.blending ?? THREE.NormalBlending,
     });

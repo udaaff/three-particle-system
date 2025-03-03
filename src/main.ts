@@ -9,7 +9,7 @@ import { CurvePath, getTestPoints } from './ParticleSystem/CurvePath';
 
 async function main() {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000000);
+  scene.background = new THREE.Color(0xaaaaaa);
   const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(0, 5, 15);
   camera.lookAt(0, 0, 0);
@@ -51,15 +51,15 @@ async function main() {
   group.add(curveObject);
   // Создаем систему частиц
   const particleSystem = new ParticleSystem({
-    // texture,
+    texture,
     maxParticles: 100000,
-    renderMode: { type: 'billboard', sortParticles: true },
+    renderMode: { type: 'billboard' },
     // blending: THREE.AdditiveBlending,
 
     // Emitter configuration
     emitter: {
-      type: 'point',
-      position: new THREE.Vector3(0, 0, 0),
+      type: 'box',
+      size: new THREE.Vector3(1, 1, 1),
       direction: {
         vector: new THREE.Vector3(0, 1, 0),
         spread: Math.PI / 4
@@ -73,9 +73,9 @@ async function main() {
       speedScale: 4,
       size: 0.2,
       color: curve([
-        [0, new THREE.Color(0, 0, 1)],
+        [0, new THREE.Color(0, 1, 1)],
         [0.5, new THREE.Color(0, 1, 0)],
-        [1, new THREE.Color(1, 0, 0)]
+        [1, new THREE.Color(1, 0, 1)]
       ]),
 
       opacity: curve([
